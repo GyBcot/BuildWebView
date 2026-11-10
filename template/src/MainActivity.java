@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
                 MainActivity.this.filePathCallback = filePathCallback;
 
                 Intent contentIntent = fileChooserParams.createIntent();
-                contentIntent.putExtra(Intent.EXTRA_MIME_TYPES, fileChooserParams.getAcceptTypes());
+                contentIntent.setType("*/*");
 
                 Intent chooserIntent = Intent.createChooser(contentIntent, fileChooserParams.getTitle());
 
