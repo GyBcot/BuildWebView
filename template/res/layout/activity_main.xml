@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/splash_bg"
+    android:fitsSystemWindows="false">
+    <WebView
+        android:id="@+id/webView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/splash_bg" />
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="3dp"
+        android:layout_gravity="top"
+        android:progressDrawable="@drawable/progress_bar"
+        android:visibility="gone"
+        android:max="100"
+        android:indeterminate="false" />
+    <LinearLayout
+        android:id="@+id/noConnectionLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        android:padding="32dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Koneksi Terputus"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="10dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pastikan perangkat kamu terhubung ke internet, lalu coba lagi."
+            android:textSize="14sp"
+            android:textColor="#99C9FF"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.4"
+            android:layout_marginBottom="28dp" />
+        <Button
+            android:id="@+id/retryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:text="Coba Lagi"
+            android:textColor="#FFFFFF"
+            android:background="@color/primary"
+            android:paddingLeft="36dp"
+            android:paddingRight="36dp" />
+    </LinearLayout>
+</FrameLayout>
