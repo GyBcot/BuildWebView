@@ -6,19 +6,19 @@ on:
       app_name:
         description: 'Nama aplikasi'
         required: true
-        default: 'RidwanzStores'
+        default: 'Web2Apk'
       package_name:
-        description: 'Package name (e.g. com.ridwanz.stores)'
+        description: 'Package name (e.g. com.rscoders.web2apk)'
         required: true
-        default: 'com.ridwanz.stores'
+        default: 'com.rscoders.web2apk'
       website_url:
         description: 'URL website yang dibuka di WebView'
         required: true
-        default: 'https://ridwanzstores.biz.id'
+        default: 'https://web2apk.eu.cc'
       tagline:
         description: 'Tagline splash screen'
         required: false
-        default: 'TOKO DIGITAL TERPERCAYA'
+        default: 'Ubah website kamu menjadi aplikasi Android'
       version_name:
         description: 'Version name (e.g. 1.0.0)'
         required: true
@@ -38,7 +38,7 @@ on:
       icon_url:
         description: 'URL icon APK (png/jpg, min 192x192)'
         required: false
-        default: 'https://cdn-fileups.vercel.app/ldvrxa6w.jpg'
+        default: 'https://cdn-fileups.vercel.app/dqycgpq0.png'
 
 permissions:
   actions: write
