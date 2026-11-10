@@ -193,9 +193,14 @@ public class MainActivity extends Activity {
                     MainActivity.this.filePathCallback.onReceiveValue(null);
                 }
                 MainActivity.this.filePathCallback = filePathCallback;
-                Intent intent = fileChooserParams.createIntent();
+
+                Intent contentIntent = fileChooserParams.createIntent();
+                contentIntent.putExtra(Intent.EXTRA_MIME_TYPES, fileChooserParams.getAcceptTypes());
+
+                Intent chooserIntent = Intent.createChooser(contentIntent, fileChooserParams.getTitle());
+
                 try {
-                    startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE);
+                    startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
                 } catch (ActivityNotFoundException e) {
                     MainActivity.this.filePathCallback = null;
                     return false;
