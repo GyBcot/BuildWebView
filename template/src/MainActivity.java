@@ -81,7 +81,12 @@ public class MainActivity extends Activity {
                 noConnectionLayout.setVisibility(View.GONE);
                 webView.setVisibility(View.VISIBLE);
                 if (isConnected()) {
-                    webView.reload();
+                    String currentUrl = webView.getUrl();
+                    if (currentUrl != null && !currentUrl.isEmpty()) {
+                        webView.reload();
+                    } else {
+                        webView.loadUrl(WEBSITE_URL);
+                    }
                 } else {
                     webView.setVisibility(View.GONE);
                     noConnectionLayout.setVisibility(View.VISIBLE);
