@@ -61,8 +61,10 @@ jobs:
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          yes 2>/dev/null | sdkmanager --licenses || true
-          sdkmanager "platforms;android-35" "build-tools;34.0.0"
+          if [ ! -d "$ANDROID_HOME/platforms/android-35" ] || [ ! -d "$ANDROID_HOME/build-tools/34.0.0" ]; then
+            yes 2>/dev/null | sdkmanager --licenses || true
+            sdkmanager "platforms;android-35" "build-tools;34.0.0"
+          fi
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_ENV
           echo "ANDROID_JAR=$ANDROID_HOME/platforms/android-35/android.jar" >> $GITHUB_ENV
