@@ -189,6 +189,7 @@ jobs:
 
       - name: Setup Icons
         run: |
+          pip install pillow --quiet --break-system-packages
           INPUT_ICON="${{ github.event.inputs.icon_url }}"
           if [ -n "$INPUT_ICON" ]; then
             wget -q -O /tmp/ic_launcher_orig "$INPUT_ICON"
