@@ -25,7 +25,6 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 public class MainActivity extends Activity {
 
@@ -79,7 +78,6 @@ public class MainActivity extends Activity {
         retryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                resetErrorMessage();
                 loadWebsite();
             }
         });
@@ -159,11 +157,6 @@ public class MainActivity extends Activity {
                         webView.setVisibility(View.GONE);
                         noConnectionLayout.setVisibility(View.VISIBLE);
                         progressBar.setVisibility(View.GONE);
-                        if (!isConnected()) {
-                            resetErrorMessage();
-                        } else {
-                            updateErrorMessage(error.getErrorCode());
-                        }
                     }
                 }
             }
@@ -173,11 +166,6 @@ public class MainActivity extends Activity {
                 webView.setVisibility(View.GONE);
                 noConnectionLayout.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.GONE);
-                if (!isConnected()) {
-                    resetErrorMessage();
-                } else {
-                    updateErrorMessage(errorCode);
-                }
             }
         });
 
@@ -318,37 +306,8 @@ public class MainActivity extends Activity {
             webView.setVisibility(View.VISIBLE);
             webView.loadUrl(WEBSITE_URL);
         } else {
-            resetErrorMessage();
             webView.setVisibility(View.GONE);
             noConnectionLayout.setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void resetErrorMessage() {
-        TextView titleView = noConnectionLayout.findViewById(R.id.errorTitle);
-        TextView descView = noConnectionLayout.findViewById(R.id.errorDesc);
-        if (titleView != null) titleView.setText("Tidak Ada Koneksi");
-        if (descView != null) descView.setText("Pastikan perangkat kamu terhubung ke internet, lalu coba lagi.");
-    }
-
-    private void updateErrorMessage(int errorCode) {
-        TextView titleView = noConnectionLayout.findViewById(R.id.errorTitle);
-        TextView descView = noConnectionLayout.findViewById(R.id.errorDesc);
-        if (titleView == null || descView == null) return;
-
-        switch (errorCode) {
-            case WebViewClient.ERROR_CONNECT:
-                titleView.setText("Koneksi Gagal");
-                descView.setText("Tidak dapat terhubung ke server. Server mungkin sedang down.");
-                break;
-            case WebViewClient.ERROR_TIMEOUT:
-                titleView.setText("Waktu Habis");
-                descView.setText("Koneksi terlalu lama. Cek koneksi internet kamu.");
-                break;
-            default:
-                titleView.setText("Tidak Ada Koneksi");
-                descView.setText("Pastikan perangkat kamu terhubung ke internet, lalu coba lagi.");
-                break;
         }
     }
 
