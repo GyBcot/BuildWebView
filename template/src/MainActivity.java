@@ -126,12 +126,13 @@ public class MainActivity extends Activity {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     Uri uri = request.getUrl();
                     String scheme = uri.getScheme();
-                    if (!"http".equals(scheme) && !"https".equals(scheme)) {
-                        try {
-                            startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                        } catch (Exception e) {}
-                        return true;
+                    if ("http".equals(scheme) || "https".equals(scheme)) {
+                        return false;
                     }
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                    } catch (Exception e) {}
+                    return true;
                 }
                 return false;
             }
@@ -140,13 +141,13 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri uri = Uri.parse(url);
                 String scheme = uri.getScheme();
-                if (!"http".equals(scheme) && !"https".equals(scheme)) {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                    } catch (Exception e) {}
-                    return true;
+                if ("http".equals(scheme) || "https".equals(scheme)) {
+                    return false;
                 }
-                return false;
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (Exception e) {}
+                return true;
             }
 
             @Override
@@ -329,6 +330,7 @@ public class MainActivity extends Activity {
         super.onPause();
         webView.onPause();
         webView.pauseTimers();
+        CookieManager.getInstance().flush();
     }
 
     @Override
@@ -342,7 +344,6 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         if (webView != null) {
             webView.clearHistory();
-            webView.clearCache(true);
             webView.loadUrl("about:blank");
             webView.onPause();
             webView.removeAllViews();
