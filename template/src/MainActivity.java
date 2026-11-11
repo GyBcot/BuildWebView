@@ -78,7 +78,14 @@ public class MainActivity extends Activity {
         retryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                loadWebsite();
+                noConnectionLayout.setVisibility(View.GONE);
+                webView.setVisibility(View.VISIBLE);
+                if (isConnected()) {
+                    webView.reload();
+                } else {
+                    webView.setVisibility(View.GONE);
+                    noConnectionLayout.setVisibility(View.VISIBLE);
+                }
             }
         });
 
