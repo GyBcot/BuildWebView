@@ -57,24 +57,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Cache Android SDK
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.ANDROID_SDK_ROOT }}/platforms/android-35
-            ${{ env.ANDROID_SDK_ROOT }}/build-tools/34.0.0
-          key: android-sdk-35-bt-34-v1
-          restore-keys: |
-            android-sdk-35-bt-34-
-
       - name: Setup Android SDK
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          if [ ! -d "$ANDROID_HOME/platforms/android-35" ] || [ ! -d "$ANDROID_HOME/build-tools/34.0.0" ]; then
-            yes 2>/dev/null | sdkmanager --licenses || true
-            sdkmanager "platforms;android-35" "build-tools;34.0.0"
-          fi
+          yes 2>/dev/null | sdkmanager --licenses || true
+          sdkmanager "platforms;android-35" "build-tools;34.0.0"
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_ENV
           echo "ANDROID_JAR=$ANDROID_HOME/platforms/android-35/android.jar" >> $GITHUB_ENV
