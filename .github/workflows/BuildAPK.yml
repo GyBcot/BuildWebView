@@ -6,19 +6,19 @@ on:
       app_name:
         description: 'Nama aplikasi'
         required: true
-        default: 'Web2Apk'
+        default: 'My App'
       package_name:
-        description: 'Package name (e.g. com.rscoders.web2apk)'
+        description: 'Package name (e.g. com.example.myapp)'
         required: true
-        default: 'com.rscoders.web2apk'
+        default: 'com.example.myapp'
       website_url:
         description: 'URL website yang dibuka di WebView'
         required: true
-        default: 'https://web2apk.eu.cc'
+        default: 'https://example.com'
       tagline:
         description: 'Tagline splash screen'
         required: false
-        default: 'Ubah website kamu menjadi aplikasi Android'
+        default: ''
       version_name:
         description: 'Version name (e.g. 1.0.0)'
         required: true
@@ -38,7 +38,7 @@ on:
       icon_url:
         description: 'URL icon APK (png/jpg, min 192x192)'
         required: false
-        default: 'https://cdn-fileups.vercel.app/dqycgpq0.png'
+        default: ''
 
 permissions:
   actions: write
