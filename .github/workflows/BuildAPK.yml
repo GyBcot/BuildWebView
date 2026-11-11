@@ -163,12 +163,15 @@ jobs:
               <color name="white">#FFFFFF</color>
           </resources>
           EOF
+          APP_NAME=$(echo "${{ github.event.inputs.app_name }}" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g')
+          TAGLINE=$(echo "${{ github.event.inputs.tagline }}" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g')
+          VERSION=$(echo "${{ github.event.inputs.version_name }}" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
           cat > source/res/values/strings.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <string name="app_name">${{ github.event.inputs.app_name }}</string>
-              <string name="tagline">${{ github.event.inputs.tagline }}</string>
-              <string name="version">Version ${{ github.event.inputs.version_name }}</string>
+              <string name="app_name">${APP_NAME}</string>
+              <string name="tagline">${TAGLINE}</string>
+              <string name="version">Version ${VERSION}</string>
           </resources>
           EOF
 
