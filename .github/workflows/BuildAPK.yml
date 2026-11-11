@@ -57,12 +57,24 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Cache Android SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_SDK_ROOT }}/platforms/android-35
+            ${{ env.ANDROID_SDK_ROOT }}/build-tools/34.0.0
+          key: android-sdk-35-bt-34-v1
+          restore-keys: |
+            android-sdk-35-bt-34-
+
       - name: Setup Android SDK
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
-          yes 2>/dev/null | sdkmanager --licenses || true
-          sdkmanager "platforms;android-35" "build-tools;34.0.0"
+          if [ ! -d "$ANDROID_HOME/platforms/android-35" ] || [ ! -d "$ANDROID_HOME/build-tools/34.0.0" ]; then
+            yes 2>/dev/null | sdkmanager --licenses || true
+            sdkmanager "platforms;android-35" "build-tools;34.0.0"
+          fi
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/34.0.0" >> $GITHUB_ENV
           echo "ANDROID_JAR=$ANDROID_HOME/platforms/android-35/android.jar" >> $GITHUB_ENV
@@ -175,9 +187,6 @@ jobs:
           </resources>
           EOF
 
-      - name: Install ImageMagick
-        run: sudo apt-get install -y imagemagick
-
       - name: Setup Icons
         run: |
           INPUT_ICON="${{ github.event.inputs.icon_url }}"
@@ -186,17 +195,23 @@ jobs:
           else
             wget -q -O /tmp/ic_launcher_orig "https://via.placeholder.com/192/${{ github.event.inputs.primary_color }}/FFFFFF?text=APP"
           fi
-          convert /tmp/ic_launcher_orig /tmp/ic_launcher.png
-          for DENSITY in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            case $DENSITY in
-              mdpi)    SIZE=48  ;;
-              hdpi)    SIZE=72  ;;
-              xhdpi)   SIZE=96  ;;
-              xxhdpi)  SIZE=144 ;;
-              xxxhdpi) SIZE=192 ;;
-            esac
-            convert /tmp/ic_launcher.png -resize ${SIZE}x${SIZE} source/res/mipmap-${DENSITY}/ic_launcher.png
-          done
+          python3 - << 'EOF'
+          from PIL import Image
+
+          sizes = {
+            "mdpi": 48,
+            "hdpi": 72,
+            "xhdpi": 96,
+            "xxhdpi": 144,
+            "xxxhdpi": 192
+          }
+
+          img = Image.open("/tmp/ic_launcher_orig").convert("RGBA")
+          for density, size in sizes.items():
+            resized = img.resize((size, size), Image.LANCZOS)
+            resized.save(f"source/res/mipmap-{density}/ic_launcher.png")
+            print(f"Generated {density}: {size}x{size}")
+          EOF
 
       - name: Decode Keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > rscoders.keystore
