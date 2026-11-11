@@ -35,7 +35,6 @@
         android:paddingRight="40dp">
 
         <TextView
-            android:id="@+id/errorTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Tidak Ada Koneksi"
@@ -45,7 +44,6 @@
             android:layout_marginBottom="12dp" />
 
         <TextView
-            android:id="@+id/errorDesc"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Pastikan perangkat kamu terhubung ke internet, lalu coba lagi."
