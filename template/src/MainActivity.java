@@ -71,6 +71,9 @@ public class MainActivity extends Activity {
                     insets.getSystemWindowInsetRight(),
                     insets.getSystemWindowInsetBottom()
                 );
+                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) progressBar.getLayoutParams();
+                params.topMargin = insets.getSystemWindowInsetTop();
+                progressBar.setLayoutParams(params);
                 return insets;
             }
         });
