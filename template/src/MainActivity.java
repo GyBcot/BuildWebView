@@ -71,9 +71,6 @@ public class MainActivity extends Activity {
                     insets.getSystemWindowInsetRight(),
                     insets.getSystemWindowInsetBottom()
                 );
-                FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) progressBar.getLayoutParams();
-                params.topMargin = insets.getSystemWindowInsetTop();
-                progressBar.setLayoutParams(params);
                 return insets;
             }
         });
@@ -81,19 +78,7 @@ public class MainActivity extends Activity {
         retryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                noConnectionLayout.setVisibility(View.GONE);
-                webView.setVisibility(View.VISIBLE);
-                if (isConnected()) {
-                    String currentUrl = webView.getUrl();
-                    if (currentUrl != null && !currentUrl.isEmpty()) {
-                        webView.reload();
-                    } else {
-                        webView.loadUrl(WEBSITE_URL);
-                    }
-                } else {
-                    webView.setVisibility(View.GONE);
-                    noConnectionLayout.setVisibility(View.VISIBLE);
-                }
+                loadWebsite();
             }
         });
 
