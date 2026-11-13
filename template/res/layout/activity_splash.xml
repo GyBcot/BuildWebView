@@ -34,9 +34,12 @@
             android:textSize="13sp"
             android:textColor="#99C9FF" />
         <ProgressBar
+            style="?android:attr/progressBarStyle"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:indeterminate="true"
             android:indeterminateTint="#FFFFFF"
+            android:indeterminateTintMode="src_in"
             android:layout_marginTop="32dp" />
     </LinearLayout>
 </RelativeLayout>
