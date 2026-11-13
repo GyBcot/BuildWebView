@@ -11,7 +11,7 @@ import android.widget.TextView;
 
 public class SplashActivity extends Activity {
 
-    private static final int SPLASH_DURATION = 1500;
+    private static final int SPLASH_DURATION = 1200;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
