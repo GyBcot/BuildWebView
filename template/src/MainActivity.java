@@ -62,6 +62,19 @@ public class MainActivity extends Activity {
         noConnectionLayout = findViewById(R.id.noConnectionLayout);
         Button retryButton = findViewById(R.id.retryButton);
 
+        webView.addJavascriptInterface(new Object() {
+            @android.webkit.JavascriptInterface
+            public String readClipboard() {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager)
+                    getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
+                    return text != null ? text.toString() : "";
+                }
+                return "";
+            }
+        }, "AndroidBridge");
+
         rootLayout.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @Override
             public android.view.WindowInsets onApplyWindowInsets(View v, android.view.WindowInsets insets) {
@@ -119,6 +132,12 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
                 CookieManager.getInstance().flush();
+                view.evaluateJavascript(
+                    "navigator.clipboard.readText = function() {" +
+                    "  return Promise.resolve(window.AndroidBridge.readClipboard());" +
+                    "};",
+                    null
+                );
             }
 
             @Override
