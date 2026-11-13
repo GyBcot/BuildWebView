@@ -94,6 +94,7 @@ jobs:
           cp template/res/layout/activity_main.xml source/res/layout/
           cp template/res/layout/activity_splash.xml source/res/layout/
           cp template/res/drawable/progress_bar.xml source/res/drawable/
+          cp template/res/drawable/ic_spinner.xml source/res/drawable/
           cp template/res/values/styles.xml source/res/values/
           cp template/src/MainActivity.java source/src/${PKG_PATH}/
           cp template/src/SplashActivity.java source/src/${PKG_PATH}/
