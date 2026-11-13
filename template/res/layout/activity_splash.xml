@@ -33,11 +33,10 @@
             android:text="@string/tagline"
             android:textSize="13sp"
             android:textColor="#99C9FF" />
-        <ImageView
-            android:id="@+id/splashSpinner"
+        <ProgressBar
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:src="@drawable/ic_spinner"
+            android:indeterminateTint="#FFFFFF"
             android:layout_marginTop="32dp" />
     </LinearLayout>
 </RelativeLayout>
