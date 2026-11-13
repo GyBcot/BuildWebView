@@ -97,6 +97,7 @@ public class MainActivity extends Activity {
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             cookieManager.setAcceptThirdPartyCookies(webView, true);
         }
@@ -188,16 +189,12 @@ public class MainActivity extends Activity {
             }
         });
 
-        webView.setDownloadListener(new android.webkit.DownloadListener() {
-            @Override
-            public void onDownloadStart(String url, String userAgent,
-                    String contentDisposition, String mimeType, long contentLength) {
-                try {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                } catch (Exception e) {}
-            }
+        webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
+            try {
+                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } catch (Exception e) {}
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -212,6 +209,7 @@ public class MainActivity extends Activity {
                 if (MainActivity.this.filePathCallback != null) {
                     MainActivity.this.filePathCallback.onReceiveValue(null);
                 }
+                
                 MainActivity.this.filePathCallback = filePathCallback;
 
                 Intent contentIntent = fileChooserParams.createIntent();
@@ -381,10 +379,12 @@ public class MainActivity extends Activity {
             }
             return;
         }
+        
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;
         }
+        
         super.onBackPressed();
     }
 }
