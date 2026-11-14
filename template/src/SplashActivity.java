@@ -12,6 +12,7 @@ import android.widget.TextView;
 public class SplashActivity extends Activity {
 
     private static final int SPLASH_DURATION = 1200;
+    private static final String SPLASH_STYLE = "__SPLASH_STYLE__";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,15 +20,17 @@ public class SplashActivity extends Activity {
         setContentView(R.layout.activity_splash);
 
         ImageView logo = findViewById(R.id.splashLogo);
-        TextView appName = findViewById(R.id.splashAppName);
-        TextView tagline = findViewById(R.id.splashTagline);
 
         Animation fadeIn = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
         fadeIn.setDuration(1000);
-
         logo.startAnimation(fadeIn);
-        appName.startAnimation(fadeIn);
-        tagline.startAnimation(fadeIn);
+
+        if ("dark".equals(SPLASH_STYLE)) {
+            TextView appName = findViewById(R.id.splashAppName);
+            TextView tagline = findViewById(R.id.splashTagline);
+            if (appName != null) appName.startAnimation(fadeIn);
+            if (tagline != null) tagline.startAnimation(fadeIn);
+        }
 
         new Handler().postDelayed(new Runnable() {
             @Override
