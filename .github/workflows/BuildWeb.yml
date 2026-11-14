@@ -1,4 +1,4 @@
-name: Build Web
+name: Build WebAPK
 
 on:
   workflow_dispatch:
@@ -34,7 +34,7 @@ jobs:
           pip install pillow -q --break-system-packages
 
       - name: Decode
-        run: apktool d base/OTPkan.apk -o out/ --no-src -f
+        run: apktool d base/OTPkan.apk -o out/ --no-src --force-manifest -f
 
       - name: Patch
         run: |
@@ -70,6 +70,15 @@ jobs:
           patch("out/res/xml/shortcuts.xml")
           patch("out/apktool.yml")
 
+          # Fix FALSE values di mipmaps.xml agar tidak error saat rebuild
+          for root, dirs, files in os.walk("out/res"):
+              for fname in files:
+                  if fname == "mipmaps.xml":
+                      fpath = os.path.join(root, fname)
+                      with open(fpath) as f: t = f.read()
+                      t = re.sub(r'<item[^>]*>FALSE</item>\n?', '', t)
+                      with open(fpath, 'w') as f: f.write(t)
+
           urllib.request.urlretrieve(ICON, "/tmp/icon.png")
           img = Image.open("/tmp/icon.png").convert("RGBA")
           for density, size in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
@@ -83,7 +92,7 @@ jobs:
 
       - name: Build & Sign
         run: |
-          apktool b out/ -o unsigned.apk
+          apktool b out/ -o unsigned.apk --use-aapt2
           zipalign -f 4 unsigned.apk aligned.apk
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ks.keystore
           apksigner sign \
@@ -101,4 +110,3 @@ jobs:
           name: WebAPK_${{ github.event.inputs.short_name }}
           path: output.apk
           retention-days: 7
-          
