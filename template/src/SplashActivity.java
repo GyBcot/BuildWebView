@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
@@ -19,18 +20,17 @@ public class SplashActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
-        ImageView logo = findViewById(R.id.splashLogo);
-
         Animation fadeIn = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
         fadeIn.setDuration(1000);
-        logo.startAnimation(fadeIn);
 
-        if ("dark".equals(SPLASH_STYLE)) {
-            TextView appName = findViewById(R.id.splashAppName);
-            TextView tagline = findViewById(R.id.splashTagline);
-            if (appName != null) appName.startAnimation(fadeIn);
-            if (tagline != null) tagline.startAnimation(fadeIn);
-        }
+        View logo = findViewById(R.id.splashLogo);
+        if (logo != null) logo.startAnimation(fadeIn);
+
+        View appName = findViewById(R.id.splashAppName);
+        if (appName != null) appName.startAnimation(fadeIn);
+
+        View tagline = findViewById(R.id.splashTagline);
+        if (tagline != null) tagline.startAnimation(fadeIn);
 
         new Handler().postDelayed(new Runnable() {
             @Override
