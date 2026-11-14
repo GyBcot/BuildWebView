@@ -1,0 +1,104 @@
+name: Build Web
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Nama aplikasi'
+        required: true
+      short_name:
+        description: 'Nama pendek (max 12 karakter)'
+        required: true
+      start_url:
+        description: 'URL utama (https://example.com/)'
+        required: true
+      icon_url:
+        description: 'URL icon PNG min 192x192'
+        required: true
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup
+        run: |
+          wget -q https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar -O /usr/local/bin/apktool.jar
+          wget -q https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/linux/apktool -O /usr/local/bin/apktool
+          chmod +x /usr/local/bin/apktool
+          pip install pillow -q --break-system-packages
+
+      - name: Decode
+        run: apktool d base/OTPkan.apk -o out/ --no-src -f
+
+      - name: Patch
+        run: |
+          python3 << 'EOF'
+          import os, re, hashlib
+          from PIL import Image
+          import urllib.request
+
+          APP   = "${{ github.event.inputs.app_name }}"
+          SHORT = "${{ github.event.inputs.short_name }}"
+          URL   = "${{ github.event.inputs.start_url }}"
+          ICON  = "${{ github.event.inputs.icon_url }}"
+
+          domain = re.sub(r'https?://([^/]+).*', r'\1', URL)
+          new_pkg = "org.chromium.webapk." + hashlib.md5(domain.encode()).hexdigest()[:16] + "_v2"
+          old_pkg = "org.chromium.webapk.a72985ac4f6760c19_v2"
+          old_domain = "otpkan.web.id"
+          old_url = "https://otpkan.web.id"
+
+          def patch(path):
+              if not os.path.exists(path): return
+              with open(path) as f: t = f.read()
+              t = t.replace(old_pkg, new_pkg)
+              t = t.replace(old_domain, domain)
+              t = t.replace(old_url, URL.rstrip('/'))
+              t = re.sub(r'OTPkan - Nomor Virtual &amp; OTP', APP, t)
+              t = re.sub(r'OTPkan - Nomor Virtual . OTP', APP, t)
+              t = re.sub(r'>OTPkan<', f'>{SHORT}<', t)
+              with open(path, 'w') as f: f.write(t)
+
+          patch("out/AndroidManifest.xml")
+          patch("out/res/values/strings.xml")
+          patch("out/res/xml/shortcuts.xml")
+          patch("out/apktool.yml")
+
+          urllib.request.urlretrieve(ICON, "/tmp/icon.png")
+          img = Image.open("/tmp/icon.png").convert("RGBA")
+          for density, size in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
+              for fname in ["notification_badge.png","shortcut_1_icon.png","shortcut_2_icon.png","shortcut_3_icon.png"]:
+                  p = f"out/res/drawable-{density}-v4/{fname}"
+                  if os.path.exists(p): img.resize((size,size), Image.LANCZOS).save(p)
+          p = "out/res/mipmap-nodpi-v4/maskable_app_icon_xxxhdpi.png"
+          if os.path.exists(p): img.resize((512,512), Image.LANCZOS).save(p)
+          print("Done:", new_pkg)
+          EOF
+
+      - name: Build & Sign
+        run: |
+          apktool b out/ -o unsigned.apk
+          zipalign -f 4 unsigned.apk aligned.apk
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > ks.keystore
+          apksigner sign \
+            --ks ks.keystore \
+            --ks-key-alias rscoders \
+            --ks-pass pass:${{ secrets.KEYSTORE_PASS }} \
+            --key-pass pass:${{ secrets.KEYSTORE_PASS }} \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --out output.apk aligned.apk
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebAPK_${{ github.event.inputs.short_name }}
+          path: output.apk
+          retention-days: 7
+          
