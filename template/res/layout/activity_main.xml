@@ -5,13 +5,11 @@
     android:layout_height="match_parent"
     android:background="@color/splash_bg"
     android:fitsSystemWindows="false">
-
     <WebView
         android:id="@+id/webView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/splash_bg" />
-
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
@@ -22,27 +20,23 @@
         android:visibility="gone"
         android:max="100"
         android:indeterminate="false" />
-
     <LinearLayout
         android:id="@+id/noConnectionLayout"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone"
-        android:paddingLeft="40dp"
-        android:paddingRight="40dp">
-
+        android:padding="32dp">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tidak Ada Koneksi"
+            android:text="Koneksi Terputus"
             android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="#FFFFFF"
-            android:layout_marginBottom="12dp" />
-
+            android:layout_marginBottom="10dp" />
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -50,20 +44,16 @@
             android:textSize="14sp"
             android:textColor="#99C9FF"
             android:gravity="center"
-            android:lineSpacingMultiplier="1.5"
-            android:layout_marginBottom="36dp" />
-
+            android:lineSpacingMultiplier="1.4"
+            android:layout_marginBottom="28dp" />
         <Button
             android:id="@+id/retryButton"
-            android:layout_width="200dp"
-            android:layout_height="50dp"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
             android:text="Coba Lagi"
             android:textColor="#FFFFFF"
-            android:textSize="15sp"
-            android:textStyle="bold"
             android:background="@color/primary"
-            android:stateListAnimator="@null" />
-
+            android:paddingLeft="36dp"
+            android:paddingRight="36dp" />
     </LinearLayout>
-
 </FrameLayout>
