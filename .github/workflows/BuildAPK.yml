@@ -39,6 +39,10 @@ on:
         description: 'URL icon APK (png/jpg, min 192x192)'
         required: false
         default: ''
+      splash_style:
+        description: 'Gaya splash screen: dark atau light'
+        required: false
+        default: 'dark'
 
 permissions:
   actions: write
@@ -91,32 +95,46 @@ jobs:
           PKG="${{ github.event.inputs.package_name }}"
           PKG_PATH="${{ steps.vars.outputs.pkg_path }}"
           URL="${{ github.event.inputs.website_url }}"
+          STYLE="${{ github.event.inputs.splash_style }}"
           cp template/res/layout/activity_main.xml source/res/layout/
-          cp template/res/layout/activity_splash.xml source/res/layout/
           cp template/res/drawable/progress_bar.xml source/res/drawable/
           cp template/res/values/styles.xml source/res/values/
           cp template/src/MainActivity.java source/src/${PKG_PATH}/
           cp template/src/SplashActivity.java source/src/${PKG_PATH}/
+          if [ "$STYLE" = "light" ]; then
+            cp template/res/layout/activity_splash_light.xml source/res/layout/activity_splash.xml
+          else
+            cp template/res/layout/activity_splash_dark.xml source/res/layout/activity_splash.xml
+          fi
           sed -i "s|__PACKAGE__|${PKG}|g" source/src/${PKG_PATH}/MainActivity.java
           sed -i "s|__PACKAGE__|${PKG}|g" source/src/${PKG_PATH}/SplashActivity.java
           sed -i "s|__WEBSITE_URL__|${URL}|g" source/src/${PKG_PATH}/MainActivity.java
+          sed -i "s|__SPLASH_STYLE__|${STYLE}|g" source/src/${PKG_PATH}/SplashActivity.java
+
+      - name: Set Splash Theme
+        id: splash_theme
+        run: |
+          if [ "${{ github.event.inputs.splash_style }}" = "light" ]; then
+            echo "theme=SplashThemeLight" >> $GITHUB_OUTPUT
+          else
+            echo "theme=SplashTheme" >> $GITHUB_OUTPUT
+          fi
 
       - name: Generate Dynamic Resource Files
         run: |
           PKG="${{ github.event.inputs.package_name }}"
           DOMAIN=$(echo "${{ github.event.inputs.website_url }}" | sed 's|https\?://||' | sed 's|/.*||')
+          SPLASH_THEME="${{ steps.splash_theme.outputs.theme }}"
           cat > source/AndroidManifest.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
               package="${PKG}"
               android:versionCode="${{ github.event.inputs.version_code }}"
               android:versionName="${{ github.event.inputs.version_name }}">
-              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="37" />
+              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="35" />
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-              <uses-permission android:name="android.permission.WAKE_LOCK" />
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
               <application
                   android:allowBackup="true"
                   android:icon="@mipmap/ic_launcher"
@@ -127,7 +145,7 @@ jobs:
                   android:networkSecurityConfig="@xml/network_security_config">
                   <activity
                       android:name=".SplashActivity"
-                      android:theme="@style/SplashTheme"
+                      android:theme="@style/${SPLASH_THEME}"
                       android:exported="true">
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -184,7 +202,7 @@ jobs:
           if [ -n "$INPUT_ICON" ]; then
             wget -q -O /tmp/ic_launcher_orig "$INPUT_ICON"
           else
-            wget -q -O /tmp/ic_launcher_orig "https://via.placeholder.com/192/${{ github.event.inputs.primary_color }}/FFFFFF?text=APP"
+            wget -q -O /tmp/ic_launcher_orig "https://placehold.co/192x192/${{ github.event.inputs.primary_color }}/FFFFFF/png"
           fi
           python3 - << 'EOF'
           from PIL import Image
