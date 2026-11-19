@@ -2,9 +2,9 @@ package __PACKAGE__;
 
 import android.app.Activity;
 import android.app.DownloadManager;
-import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -31,7 +31,6 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends Activity {
@@ -46,9 +45,6 @@ public class MainActivity extends Activity {
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private FrameLayout rootLayout;
-    private LinearLayout downloadLayout;
-    private ProgressBar downloadProgress;
-    private TextView downloadText;
     private BroadcastReceiver downloadReceiver;
     private long lastDownloadId = -1;
 
@@ -83,8 +79,10 @@ public class MainActivity extends Activity {
                 if (cursor != null && cursor.moveToFirst()) {
                     int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
                     String title = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_TITLE));
+                    String localUri = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
+                    String savedPath = Uri.parse(localUri).getPath();
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        Toast.makeText(MainActivity.this, "Download selesai: " + title, Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, "Download selesai: " + title + "\nTersimpan di: " + savedPath, Toast.LENGTH_LONG).show();
                     } else if (status == DownloadManager.STATUS_FAILED) {
                         Toast.makeText(MainActivity.this, "Download gagal: " + title, Toast.LENGTH_LONG).show();
                     }
@@ -101,9 +99,6 @@ public class MainActivity extends Activity {
         rootLayout = findViewById(R.id.rootLayout);
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
-        downloadLayout = findViewById(R.id.downloadLayout);
-        downloadProgress = findViewById(R.id.downloadProgress);
-        downloadText = findViewById(R.id.downloadText);
         noConnectionLayout = findViewById(R.id.noConnectionLayout);
         Button retryButton = findViewById(R.id.retryButton);
 
@@ -440,45 +435,7 @@ public class MainActivity extends Activity {
             request.allowScanningByMediaScanner();
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
             lastDownloadId = dm.enqueue(request);
-            final long downloadId = lastDownloadId;
-            final String downloadName = fileName;
-            runOnUiThread(() -> {
-                downloadLayout.setVisibility(View.VISIBLE);
-                downloadProgress.setProgress(0);
-                downloadText.setText("Mengunduh " + downloadName + " 0%");
-            });
             Toast.makeText(this, "Mengunduh " + fileName, Toast.LENGTH_SHORT).show();
-            new Thread(() -> {
-                boolean done = false;
-                while (!done) {
-                    DownloadManager.Query query = new DownloadManager.Query();
-                    query.setFilterById(downloadId);
-                    Cursor cursor = dm.query(query);
-                    if (cursor != null && cursor.moveToFirst()) {
-                        int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
-                        long downloaded = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
-                        long total = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
-                        if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
-                            runOnUiThread(() -> downloadLayout.setVisibility(View.GONE));
-                            done = true;
-                        } else if (total > 0) {
-                            int progress = (int) (downloaded * 100 / total);
-                            runOnUiThread(() -> {
-                                downloadProgress.setProgress(progress);
-                                downloadText.setText("Mengunduh " + downloadName + " " + progress + "%");
-                            });
-                        }
-                        cursor.close();
-                    }
-                    if (!done) {
-                        try {
-                            Thread.sleep(500);
-                        } catch (InterruptedException e) {
-                            done = true;
-                        }
-                    }
-                }
-            }).start();
         } catch (Exception e) {}
     }
 
