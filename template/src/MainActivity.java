@@ -1,6 +1,7 @@
 package __PACKAGE__;
 
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -10,10 +11,12 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
+import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -25,6 +28,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
 
@@ -55,6 +59,12 @@ public class MainActivity extends Activity {
         }
 
         setContentView(R.layout.activity_main);
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1002);
+            }
+        }
 
         rootLayout = findViewById(R.id.rootLayout);
         webView = findViewById(R.id.webView);
@@ -145,6 +155,10 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     Uri uri = request.getUrl();
+                    if (uri.toString().toLowerCase().contains("download")) {
+                        downloadWithManager(uri.toString(), null, null, null);
+                        return true;
+                    }
                     String scheme = uri.getScheme();
                     if ("http".equals(scheme) || "https".equals(scheme)) {
                         return false;
@@ -190,11 +204,7 @@ public class MainActivity extends Activity {
         });
 
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (Exception e) {}
+            downloadWithManager(url, userAgent, contentDisposition, mimeType);
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -315,6 +325,31 @@ public class MainActivity extends Activity {
                 filePathCallback = null;
             }
         }
+    }
+
+    private void downloadWithManager(String url, String userAgent, String contentDisposition, String mimeType) {
+        try {
+            String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            if (mimeType != null) {
+                request.setMimeType(mimeType);
+            }
+            if (userAgent != null) {
+                request.addRequestHeader("User-Agent", userAgent);
+            }
+            String cookie = CookieManager.getInstance().getCookie(url);
+            if (cookie != null) {
+                request.addRequestHeader("Cookie", cookie);
+            }
+            request.setTitle(fileName);
+            request.setDescription("Mengunduh...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+            request.allowScanningByMediaScanner();
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            dm.enqueue(request);
+            Toast.makeText(this, "Mengunduh " + fileName, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {}
     }
 
     private void loadWebsite() {
