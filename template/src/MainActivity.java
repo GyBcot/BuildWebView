@@ -361,9 +361,66 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String guessFileName(String url, String contentDisposition, String mimeType) {
+        String name = null;
+        if (contentDisposition != null && contentDisposition.contains("filename=")) {
+            int start = contentDisposition.indexOf("filename=") + 9;
+            String part = contentDisposition.substring(start).trim();
+            if (part.startsWith("\"")) {
+                int end = part.indexOf("\"", 1);
+                if (end > 1) {
+                    name = part.substring(1, end);
+                }
+            } else {
+                int end = part.indexOf(";");
+                name = end > 0 ? part.substring(0, end).trim() : part.trim();
+            }
+        }
+        if (name == null || name.isEmpty()) {
+            Uri uri = Uri.parse(url);
+            name = uri.getQueryParameter("filename");
+            if (name == null) {
+                name = uri.getQueryParameter("file");
+            }
+            if (name == null) {
+                name = uri.getQueryParameter("name");
+            }
+        }
+        if (name == null || name.isEmpty()) {
+            String path = Uri.parse(url).getLastPathSegment();
+            if (path != null && path.contains(".")) {
+                name = path;
+            }
+        }
+        if (name == null || name.isEmpty()) {
+            name = URLUtil.guessFileName(url, contentDisposition, mimeType);
+        }
+        if (name != null && name.endsWith(".bin")) {
+            String ext = null;
+            if (mimeType != null) {
+                ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+            }
+            if (ext != null && !ext.equals("bin")) {
+                name = name.substring(0, name.length() - 4) + "." + ext;
+            } else {
+                name = name.substring(0, name.length() - 4);
+            }
+        }
+        if (name != null && !name.contains(".")) {
+            String ext = null;
+            if (mimeType != null) {
+                ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+            }
+            if (ext != null) {
+                name = name + "." + ext;
+            }
+        }
+        return name;
+    }
+
     private void downloadWithManager(String url, String userAgent, String contentDisposition, String mimeType) {
         try {
-            String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            String fileName = guessFileName(url, contentDisposition, mimeType);
             DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
             if (mimeType != null) {
                 request.setMimeType(mimeType);
