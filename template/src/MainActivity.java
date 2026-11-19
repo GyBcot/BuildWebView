@@ -80,7 +80,13 @@ public class MainActivity extends Activity {
                     int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
                     String title = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_TITLE));
                     String localUri = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
-                    String savedPath = Uri.parse(localUri).getPath();
+                    String savedPath = title;
+                    if (localUri != null && !localUri.isEmpty()) {
+                        String path = Uri.parse(localUri).getPath();
+                        if (path != null && !path.isEmpty()) {
+                            savedPath = path;
+                        }
+                    }
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
                         Toast.makeText(MainActivity.this, "Download selesai: " + title + "\nTersimpan di: " + savedPath, Toast.LENGTH_LONG).show();
                     } else if (status == DownloadManager.STATUS_FAILED) {
@@ -204,6 +210,10 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri uri = Uri.parse(url);
+                if (url.toLowerCase().contains("download")) {
+                    downloadWithManager(url, null, null, null);
+                    return true;
+                }
                 String scheme = uri.getScheme();
                 if ("http".equals(scheme) || "https".equals(scheme)) {
                     return false;
@@ -410,6 +420,9 @@ public class MainActivity extends Activity {
             if (ext != null) {
                 name = name + "." + ext;
             }
+        }
+        if (name != null) {
+            name = name.replace("/", "_").replace("\\", "_").trim();
         }
         return name;
     }
