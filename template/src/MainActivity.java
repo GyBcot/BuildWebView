@@ -2,9 +2,14 @@ package __PACKAGE__;
 
 import android.app.Activity;
 import android.app.DownloadManager;
+import android.app.PendingIntent;
+import android.app.NotificationManager;
+import android.app.NotificationChannel;
+import android.app.Notification;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -64,6 +69,11 @@ public class MainActivity extends Activity {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1002);
             }
+        }
+
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channel = new NotificationChannel("download", "Download", NotificationManager.IMPORTANCE_LOW);
+            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(channel);
         }
 
         rootLayout = findViewById(R.id.rootLayout);
@@ -342,13 +352,75 @@ public class MainActivity extends Activity {
                 request.addRequestHeader("Cookie", cookie);
             }
             request.setTitle(fileName);
-            request.setDescription("Mengunduh...");
-            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE);
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_HIDDEN);
             request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
             request.allowScanningByMediaScanner();
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
-            dm.enqueue(request);
+            long downloadId = dm.enqueue(request);
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            Notification.Builder builder;
+            if (Build.VERSION.SDK_INT >= 26) {
+                builder = new Notification.Builder(this, "download");
+            } else {
+                builder = new Notification.Builder(this);
+            }
+            Intent openIntent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+            int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= 23) {
+                flags = flags | PendingIntent.FLAG_IMMUTABLE;
+            }
+            PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, openIntent, flags);
+            builder.setContentTitle(fileName);
+            builder.setContentText("Mengunduh...");
+            builder.setSmallIcon(android.R.drawable.stat_sys_download);
+            builder.setContentIntent(pendingIntent);
+            builder.setOngoing(true);
+            builder.setProgress(100, 0, false);
+            int notifId = (int) downloadId;
+            nm.notify(notifId, builder.build());
             Toast.makeText(this, "Mengunduh " + fileName, Toast.LENGTH_SHORT).show();
+            new Thread(() -> {
+                boolean done = false;
+                while (!done) {
+                    DownloadManager.Query query = new DownloadManager.Query();
+                    query.setFilterById(downloadId);
+                    Cursor cursor = dm.query(query);
+                    if (cursor != null && cursor.moveToFirst()) {
+                        int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
+                        long downloaded = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                        long total = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                        if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                            builder.setContentText("Download selesai");
+                            builder.setSmallIcon(android.R.drawable.stat_sys_download_done);
+                            builder.setProgress(0, 0, false);
+                            builder.setOngoing(false);
+                            builder.setAutoCancel(true);
+                            nm.notify(notifId, builder.build());
+                            done = true;
+                        } else if (status == DownloadManager.STATUS_FAILED) {
+                            builder.setContentText("Download gagal");
+                            builder.setProgress(0, 0, false);
+                            builder.setOngoing(false);
+                            builder.setAutoCancel(true);
+                            nm.notify(notifId, builder.build());
+                            done = true;
+                        } else if (total > 0) {
+                            int progress = (int) (downloaded * 100 / total);
+                            builder.setContentText("Mengunduh... " + progress + "%");
+                            builder.setProgress(100, progress, false);
+                            nm.notify(notifId, builder.build());
+                        }
+                        cursor.close();
+                    }
+                    if (!done) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            done = true;
+                        }
+                    }
+                }
+            }).start();
         } catch (Exception e) {}
     }
 
