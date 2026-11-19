@@ -1,19 +1,25 @@
 package __PACKAGE__;
 
 import android.app.Activity;
+import android.app.DownloadManager;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
+import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -25,11 +31,15 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.Toast;
+import android.Manifest;
+import android.content.pm.PackageManager;
 
 public class MainActivity extends Activity {
 
     private static final String WEBSITE_URL = "__WEBSITE_URL__";
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
+    private static final int STORAGE_PERMISSION_REQUEST_CODE = 1002;
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -38,6 +48,13 @@ public class MainActivity extends Activity {
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
     private FrameLayout rootLayout;
+    private BroadcastReceiver downloadReceiver;
+    private long lastDownloadId = -1;
+
+    private String pendingUrl;
+    private String pendingUserAgent;
+    private String pendingContentDisposition;
+    private String pendingMimeType;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +72,40 @@ public class MainActivity extends Activity {
         }
 
         setContentView(R.layout.activity_main);
+
+        downloadReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                if (id != lastDownloadId) return;
+                DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                DownloadManager.Query query = new DownloadManager.Query();
+                query.setFilterById(id);
+                Cursor cursor = dm.query(query);
+                if (cursor != null && cursor.moveToFirst()) {
+                    int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
+                    String title = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_TITLE));
+                    String localUri = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
+                    String savedPath = title;
+                    if (localUri != null && !localUri.isEmpty()) {
+                        String path = Uri.parse(localUri).getPath();
+                        if (path != null && !path.isEmpty()) savedPath = path;
+                    }
+                    if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                        Toast.makeText(MainActivity.this, "Download selesai: " + title + "\nTersimpan di: " + savedPath, Toast.LENGTH_LONG).show();
+                    } else if (status == DownloadManager.STATUS_FAILED) {
+                        Toast.makeText(MainActivity.this, "Download gagal: " + title, Toast.LENGTH_LONG).show();
+                    }
+                    cursor.close();
+                }
+            }
+        };
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(downloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        }
 
         rootLayout = findViewById(R.id.rootLayout);
         webView = findViewById(R.id.webView);
@@ -97,7 +148,6 @@ public class MainActivity extends Activity {
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
-        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             cookieManager.setAcceptThirdPartyCookies(webView, true);
         }
@@ -151,7 +201,9 @@ public class MainActivity extends Activity {
                     }
                     try {
                         startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                    } catch (Exception e) {}
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "Tidak dapat membuka link ini", Toast.LENGTH_SHORT).show();
+                    }
                     return true;
                 }
                 return false;
@@ -166,7 +218,9 @@ public class MainActivity extends Activity {
                 }
                 try {
                     startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                    Toast.makeText(MainActivity.this, "Tidak dapat membuka link ini", Toast.LENGTH_SHORT).show();
+                }
                 return true;
             }
 
@@ -190,11 +244,17 @@ public class MainActivity extends Activity {
         });
 
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
-            } catch (Exception e) {}
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                    pendingUrl = url;
+                    pendingUserAgent = userAgent;
+                    pendingContentDisposition = contentDisposition;
+                    pendingMimeType = mimeType;
+                    requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_PERMISSION_REQUEST_CODE);
+                    return;
+                }
+            }
+            downloadWithManager(url, userAgent, contentDisposition, mimeType);
         });
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -209,14 +269,10 @@ public class MainActivity extends Activity {
                 if (MainActivity.this.filePathCallback != null) {
                     MainActivity.this.filePathCallback.onReceiveValue(null);
                 }
-                
                 MainActivity.this.filePathCallback = filePathCallback;
-
                 Intent contentIntent = fileChooserParams.createIntent();
                 contentIntent.setType("*/*");
-
                 Intent chooserIntent = Intent.createChooser(contentIntent, fileChooserParams.getTitle());
-
                 try {
                     startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST_CODE);
                 } catch (ActivityNotFoundException e) {
@@ -304,6 +360,43 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (pendingUrl != null) {
+                    downloadWithManager(pendingUrl, pendingUserAgent, pendingContentDisposition, pendingMimeType);
+                }
+            } else {
+                Toast.makeText(this, "Izin penyimpanan diperlukan untuk download", Toast.LENGTH_SHORT).show();
+            }
+            pendingUrl = null;
+            pendingUserAgent = null;
+            pendingContentDisposition = null;
+            pendingMimeType = null;
+        }
+    }
+
+    private void downloadWithManager(String url, String userAgent, String contentDisposition, String mimeType) {
+        try {
+            String fileName = URLUtil.guessFileName(url, contentDisposition, mimeType);
+            String cookie = CookieManager.getInstance().getCookie(url);
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            if (userAgent != null) request.addRequestHeader("User-Agent", userAgent);
+            if (cookie != null) request.addRequestHeader("Cookie", cookie);
+            request.setTitle(fileName);
+            request.setDescription("Mengunduh...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+            if (mimeType != null) request.setMimeType(mimeType);
+            DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+            lastDownloadId = dm.enqueue(request);
+            Toast.makeText(this, "Mengunduh: " + fileName, Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Download gagal: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == FILE_CHOOSER_REQUEST_CODE) {
             if (filePathCallback != null) {
@@ -359,6 +452,10 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (downloadReceiver != null) {
+            try { unregisterReceiver(downloadReceiver); } catch (Exception e) {}
+            downloadReceiver = null;
+        }
         if (webView != null) {
             webView.clearHistory();
             webView.loadUrl("about:blank");
@@ -379,12 +476,10 @@ public class MainActivity extends Activity {
             }
             return;
         }
-        
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;
         }
-        
         super.onBackPressed();
     }
 }
