@@ -69,22 +69,6 @@ jobs:
           echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/35.0.0" >> $GITHUB_ENV
           echo "ANDROID_JAR=$ANDROID_HOME/platforms/android-35/android.jar" >> $GITHUB_ENV
 
-      - name: Download SwipeRefreshLayout AAR
-        run: |
-          mkdir -p source/libs
-          curl -f -L -o /tmp/swiperefresh.aar \
-            "https://maven.google.com/androidx/swiperefreshlayout/swiperefreshlayout/1.1.0/swiperefreshlayout-1.1.0.aar"
-          curl -f -L -o /tmp/androidx-core.aar \
-            "https://maven.google.com/androidx/core/core/1.9.0/core-1.9.0.aar"
-          mkdir -p /tmp/swiperefresh_extract /tmp/core_extract
-          cp /tmp/swiperefresh.aar /tmp/swiperefresh_extract/
-          cd /tmp/swiperefresh_extract && unzip -q swiperefresh.aar
-          cp /tmp/swiperefresh_extract/classes.jar /tmp/swiperefresh.jar
-          cp /tmp/androidx-core.aar /tmp/core_extract/
-          cd /tmp/core_extract && unzip -q androidx-core.aar
-          cp /tmp/core_extract/classes.jar /tmp/androidx-core.jar
-          echo "SWIPEREFRESH_JAR=/tmp/swiperefresh.jar:/tmp/androidx-core.jar" >> $GITHUB_ENV
-
       - name: Set Variables
         id: vars
         run: |
@@ -237,14 +221,13 @@ jobs:
           JAVA_FILES=$(find source/src source/gen -type f -name "*.java")
           javac --release 8 \
             -d source/bin/classes \
-            -classpath source/src:source/gen:$ANDROID_JAR:$SWIPEREFRESH_JAR \
+            -classpath source/src:source/gen:$ANDROID_JAR \
             $JAVA_FILES
 
       - name: Convert to DEX
         run: |
           $BUILD_TOOLS/d8 \
             $(find source/bin/classes -name "*.class") \
-            $(echo $SWIPEREFRESH_JAR | tr ':' ' ') \
             --lib $ANDROID_JAR \
             --output source/bin/apk/
 
@@ -281,4 +264,3 @@ jobs:
           name: ${{ steps.vars.outputs.apk_name }}
           path: ${{ steps.sign.outputs.apk_path }}
           retention-days: 7
-          
