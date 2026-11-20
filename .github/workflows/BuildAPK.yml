@@ -69,6 +69,16 @@ jobs:
           echo "BUILD_TOOLS=$ANDROID_HOME/build-tools/35.0.0" >> $GITHUB_ENV
           echo "ANDROID_JAR=$ANDROID_HOME/platforms/android-35/android.jar" >> $GITHUB_ENV
 
+      - name: Download SwipeRefreshLayout AAR
+        run: |
+          mkdir -p source/libs
+          curl -L -o /tmp/swiperefresh.aar "https://dl.google.com/android/repository/swiperefreshlayout-1.1.0.aar"
+          cd /tmp && mkdir -p swiperefresh_extract
+          cp swiperefresh.aar swiperefresh_extract/
+          cd swiperefresh_extract && unzip -q swiperefresh.aar
+          cp classes.jar /tmp/swiperefresh.jar
+          echo "SWIPEREFRESH_JAR=/tmp/swiperefresh.jar" >> $GITHUB_ENV
+
       - name: Set Variables
         id: vars
         run: |
@@ -221,13 +231,14 @@ jobs:
           JAVA_FILES=$(find source/src source/gen -type f -name "*.java")
           javac --release 8 \
             -d source/bin/classes \
-            -classpath source/src:source/gen:$ANDROID_JAR \
+            -classpath source/src:source/gen:$ANDROID_JAR:$SWIPEREFRESH_JAR \
             $JAVA_FILES
 
       - name: Convert to DEX
         run: |
           $BUILD_TOOLS/d8 \
             $(find source/bin/classes -name "*.class") \
+            $SWIPEREFRESH_JAR \
             --lib $ANDROID_JAR \
             --output source/bin/apk/
 
