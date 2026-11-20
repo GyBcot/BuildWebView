@@ -230,6 +230,7 @@ jobs:
 
       - name: Convert to DEX (R8 Obfuscated)
         run: |
+          mkdir -p source/bin/dex
           java -cp $ANDROID_HOME/build-tools/35.0.0/lib/d8.jar \
             com.android.tools.r8.R8 \
             --release \
