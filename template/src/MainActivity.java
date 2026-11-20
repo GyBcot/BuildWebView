@@ -117,6 +117,7 @@ public class MainActivity extends Activity {
 
         rootLayout = findViewById(R.id.rootLayout);
         webView = findViewById(R.id.webView);
+        webView.setBackgroundColor(0x00000000);
         progressBar = findViewById(R.id.progressBar);
         noConnectionLayout = findViewById(R.id.noConnectionLayout);
         Button retryButton = findViewById(R.id.retryButton);
@@ -150,10 +151,8 @@ public class MainActivity extends Activity {
         retryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (isConnected()) {
-                    progressBar.setVisibility(View.VISIBLE);
-                    progressBar.setProgress(0);
-                }
+                progressBar.setVisibility(View.VISIBLE);
+                progressBar.setProgress(0);
                 loadWebsite();
             }
         });
@@ -600,6 +599,7 @@ public class MainActivity extends Activity {
             webView.goBack();
             return;
         }       
+        
         super.onBackPressed();
     }
 }
