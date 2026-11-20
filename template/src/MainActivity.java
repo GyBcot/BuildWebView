@@ -150,8 +150,10 @@ public class MainActivity extends Activity {
         retryButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                progressBar.setVisibility(View.VISIBLE);
-                progressBar.setProgress(0);
+                if (isConnected()) {
+                    progressBar.setVisibility(View.VISIBLE);
+                    progressBar.setProgress(0);
+                }
                 loadWebsite();
             }
         });
@@ -572,8 +574,7 @@ public class MainActivity extends Activity {
         if (downloadReceiver != null) {
             try { unregisterReceiver(downloadReceiver); } catch (Exception e) {}
             downloadReceiver = null;
-        }
-        
+        }     
         if (webView != null) {
             webView.clearHistory();
             webView.loadUrl("about:blank");
@@ -598,8 +599,7 @@ public class MainActivity extends Activity {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;
-        }
-        
+        }       
         super.onBackPressed();
     }
 }
