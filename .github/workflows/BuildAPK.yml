@@ -181,9 +181,9 @@ jobs:
           pip install pillow --quiet --break-system-packages
           INPUT_ICON="${{ github.event.inputs.icon_url }}"
           if [ -n "$INPUT_ICON" ]; then
-            wget -q -O /tmp/ic_launcher_orig "$INPUT_ICON"
+            wget -q --tries=5 --timeout=30 --retry-connrefused -O /tmp/ic_launcher_orig "$INPUT_ICON"
           else
-            wget -q -O /tmp/ic_launcher_orig "https://via.placeholder.com/192/${{ github.event.inputs.primary_color }}/FFFFFF?text=APP"
+            wget -q --tries=5 --timeout=30 -O /tmp/ic_launcher_orig "https://via.placeholder.com/192/${{ github.event.inputs.primary_color }}/FFFFFF?text=APP"
           fi
           python3 - << 'EOF'
           from PIL import Image
@@ -264,4 +264,5 @@ jobs:
           name: ${{ steps.vars.outputs.apk_name }}
           path: ${{ steps.sign.outputs.apk_path }}
           retention-days: 7
+          
           
