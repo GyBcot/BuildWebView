@@ -185,10 +185,8 @@ jobs:
           else
             wget -q -O /tmp/ic_launcher_orig "https://via.placeholder.com/192/${{ github.event.inputs.primary_color }}/FFFFFF?text=APP"
           fi
-          
           python3 - << 'EOF'
           from PIL import Image
-
           sizes = {
             "mdpi": 48,
             "hdpi": 72,
@@ -196,7 +194,6 @@ jobs:
             "xxhdpi": 144,
             "xxxhdpi": 192
           }
-
           img = Image.open("/tmp/ic_launcher_orig").convert("RGBA")
           for density, size in sizes.items():
             resized = img.resize((size, size), Image.LANCZOS)
@@ -257,7 +254,6 @@ jobs:
             --v1-signing-enabled true \
             --v2-signing-enabled true \
             --v3-signing-enabled true \
-            
             --out "hasil/${APK_NAME}" \
             source/bin/apk/aligned.apk
           echo "apk_path=hasil/${APK_NAME}" >> $GITHUB_OUTPUT
