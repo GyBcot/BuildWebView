@@ -19,6 +19,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.TranslateAnimation;
@@ -41,18 +42,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.Manifest;
 import android.content.pm.PackageManager;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 public class MainActivity extends Activity {
 
     private static final String WEBSITE_URL = "__WEBSITE_URL__";
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int STORAGE_PERMISSION_REQUEST_CODE = 1002;
+    private static final int PULL_THRESHOLD = 220;
 
     private WebView webView;
     private ProgressBar progressBar;
+    private ProgressBar pullRefreshSpinner;
+    private FrameLayout pullRefreshContainer;
     private LinearLayout noConnectionLayout;
-    private SwipeRefreshLayout swipeRefreshLayout;
     private ValueCallback<Uri[]> filePathCallback;
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
@@ -68,6 +70,10 @@ public class MainActivity extends Activity {
     private LinearLayout downloadBar;
     private Handler downloadBarHandler = new Handler();
     private Runnable downloadBarDismissRunnable;
+
+    private float pullStartY = 0;
+    private boolean isPulling = false;
+    private boolean isRefreshing = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,18 +127,49 @@ public class MainActivity extends Activity {
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
         noConnectionLayout = findViewById(R.id.noConnectionLayout);
-        swipeRefreshLayout = findViewById(R.id.swipeRefresh);
+        pullRefreshContainer = findViewById(R.id.pullRefreshContainer);
+        pullRefreshSpinner = findViewById(R.id.pullRefreshSpinner);
         Button retryButton = findViewById(R.id.retryButton);
 
-        swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#0d9488"));
-        swipeRefreshLayout.setProgressBackgroundColorSchemeColor(Color.parseColor("#1a2744"));
-        swipeRefreshLayout.setOnRefreshListener(() -> {
-            if (isConnected()) {
-                webView.reload();
-            } else {
-                swipeRefreshLayout.setRefreshing(false);
-                webView.setVisibility(View.GONE);
-                noConnectionLayout.setVisibility(View.VISIBLE);
+        webView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (isRefreshing) return false;
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        pullStartY = event.getY();
+                        isPulling = false;
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        float deltaY = event.getY() - pullStartY;
+                        boolean atTop = !webView.canScrollVertically(-1);
+                        if (atTop && deltaY > 0) {
+                            isPulling = true;
+                            pullRefreshContainer.setVisibility(View.VISIBLE);
+                            float progress = Math.min(deltaY / PULL_THRESHOLD, 1f);
+                            pullRefreshContainer.setAlpha(progress);
+                            if (progress >= 1f) {
+                                pullRefreshSpinner.setVisibility(View.VISIBLE);
+                            } else {
+                                pullRefreshSpinner.setVisibility(View.GONE);
+                            }
+                            return true;
+                        }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        if (isPulling) {
+                            float delta = event.getY() - pullStartY;
+                            if (delta >= PULL_THRESHOLD && isConnected()) {
+                                triggerRefresh();
+                            } else {
+                                resetPull();
+                            }
+                            isPulling = false;
+                        }
+                        break;
+                }
+                return false;
             }
         });
 
@@ -205,7 +242,8 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
-                swipeRefreshLayout.setRefreshing(false);
+                resetPull();
+                isRefreshing = false;
                 CookieManager.getInstance().flush();
                 view.evaluateJavascript(
                     "navigator.clipboard.readText = function() {" +
@@ -252,7 +290,8 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (request.isForMainFrame()) {
-                        swipeRefreshLayout.setRefreshing(false);
+                        resetPull();
+                        isRefreshing = false;
                         webView.setVisibility(View.GONE);
                         noConnectionLayout.setVisibility(View.VISIBLE);
                         progressBar.setVisibility(View.GONE);
@@ -262,7 +301,8 @@ public class MainActivity extends Activity {
 
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                swipeRefreshLayout.setRefreshing(false);
+                resetPull();
+                isRefreshing = false;
                 webView.setVisibility(View.GONE);
                 noConnectionLayout.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.GONE);
@@ -383,6 +423,20 @@ public class MainActivity extends Activity {
         } else {
             loadWebsite();
         }
+    }
+
+    private void triggerRefresh() {
+        isRefreshing = true;
+        pullRefreshSpinner.setVisibility(View.VISIBLE);
+        pullRefreshContainer.setVisibility(View.VISIBLE);
+        pullRefreshContainer.setAlpha(1f);
+        webView.reload();
+    }
+
+    private void resetPull() {
+        pullRefreshContainer.setVisibility(View.GONE);
+        pullRefreshSpinner.setVisibility(View.GONE);
+        pullRefreshContainer.setAlpha(0f);
     }
 
     private void showDownloadBar(String fileName) {
