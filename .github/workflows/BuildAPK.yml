@@ -232,9 +232,10 @@ jobs:
         run: |
           java -cp $ANDROID_HOME/build-tools/35.0.0/lib/d8.jar \
             com.android.tools.r8.R8 \
-            $(find source/bin/classes -name "*.class") \
+            --release \
             --lib $ANDROID_JAR \
-            --output source/bin/apk/
+            --output source/bin/apk/ \
+            $(find source/bin/classes -name "*.class")
 
       - name: Add DEX to APK
         run: |
@@ -269,4 +270,3 @@ jobs:
           name: ${{ steps.vars.outputs.apk_name }}
           path: ${{ steps.sign.outputs.apk_path }}
           retention-days: 7
-          
