@@ -57,7 +57,6 @@ public class MainActivity extends Activity {
     private FrameLayout rootLayout;
     private BroadcastReceiver downloadReceiver;
     private long lastDownloadId = -1;
-    private String lastMimeType;
 
     private String pendingUrl;
     private String pendingUserAgent;
@@ -97,20 +96,11 @@ public class MainActivity extends Activity {
                 if (cursor != null && cursor.moveToFirst()) {
                     int statusCol = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
                     int titleCol = cursor.getColumnIndex(DownloadManager.COLUMN_TITLE);
-                    int localUriCol = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
                     int status = statusCol >= 0 ? cursor.getInt(statusCol) : -1;
                     String title = titleCol >= 0 ? cursor.getString(titleCol) : "";
-                    String localUri = localUriCol >= 0 ? cursor.getString(localUriCol) : null;
-                    String savedPath = title;
-                    if (localUri != null && !localUri.isEmpty()) {
-                        String path = Uri.parse(localUri).getPath();
-                        if (path != null && !path.isEmpty()) savedPath = path;
-                    }
                     final String finalTitle = title;
-                    final String finalPath = savedPath;
-                    final String finalMime = lastMimeType;
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        runOnUiThread(() -> showDownloadBar(finalTitle, finalPath, finalMime));
+                        runOnUiThread(() -> showDownloadBar(finalTitle));
                     } else if (status == DownloadManager.STATUS_FAILED) {
                         runOnUiThread(() -> Toast.makeText(MainActivity.this, "Download gagal: " + finalTitle, Toast.LENGTH_LONG).show());
                     }
@@ -377,7 +367,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void showDownloadBar(String fileName, String filePath, String mimeType) {
+    private void showDownloadBar(String fileName) {
         if (downloadBar != null) {
             rootLayout.removeView(downloadBar);
             downloadBar = null;
@@ -414,11 +404,17 @@ public class MainActivity extends Activity {
         btnBuka.setPadding(24, 0, 24, 0);
         btnBuka.setOnClickListener(v -> {
             try {
-                Intent open = new Intent(Intent.ACTION_VIEW);
-                Uri uri = Uri.parse("file://" + filePath);
-                open.setDataAndType(uri, mimeType != null ? mimeType : "*/*");
-                open.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(Intent.createChooser(open, "Buka dengan"));
+                DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+                Uri uri = dm.getUriForDownloadedFile(lastDownloadId);
+                String mime = dm.getMimeTypeForDownloadedFile(lastDownloadId);
+                if (uri != null) {
+                    Intent open = new Intent(Intent.ACTION_VIEW);
+                    open.setDataAndType(uri, mime != null ? mime : "*/*");
+                    open.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(Intent.createChooser(open, "Buka dengan"));
+                } else {
+                    Toast.makeText(this, "File tidak ditemukan", Toast.LENGTH_SHORT).show();
+                }
             } catch (Exception e) {
                 Toast.makeText(this, "Tidak dapat membuka file", Toast.LENGTH_SHORT).show();
             }
@@ -498,7 +494,6 @@ public class MainActivity extends Activity {
             if (mimeType != null) request.setMimeType(mimeType);
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
             lastDownloadId = dm.enqueue(request);
-            lastMimeType = mimeType;
             Toast.makeText(this, "Mengunduh: " + fileName, Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             Toast.makeText(this, "Download gagal: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -568,7 +563,6 @@ public class MainActivity extends Activity {
             try { unregisterReceiver(downloadReceiver); } catch (Exception e) {}
             downloadReceiver = null;
         }
-        
         if (webView != null) {
             webView.clearHistory();
             webView.loadUrl("about:blank");
@@ -589,12 +583,10 @@ public class MainActivity extends Activity {
             }
             return;
         }
-        
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;
         }
-        
         super.onBackPressed();
     }
 }
