@@ -102,7 +102,7 @@ public class MainActivity extends Activity {
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
                         runOnUiThread(() -> showDownloadBar(finalTitle));
                     } else if (status == DownloadManager.STATUS_FAILED) {
-                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Download gagal: " + finalTitle, Toast.LENGTH_LONG).show());
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Unduhan gagal: " + finalTitle, Toast.LENGTH_LONG).show());
                     }
                     cursor.close();
                 }
@@ -401,7 +401,7 @@ public class MainActivity extends Activity {
         bar.setLayoutParams(barParams);
 
         TextView msgView = new TextView(this);
-        msgView.setText("Unduhan selesai · " + fileName);
+        msgView.setText("Unduhan Berhasil · " + fileName);
         msgView.setTextColor(Color.WHITE);
         msgView.setTextSize(13);
         msgView.setSingleLine(true);
@@ -482,7 +482,7 @@ public class MainActivity extends Activity {
                     downloadWithManager(pendingUrl, pendingUserAgent, pendingContentDisposition, pendingMimeType);
                 }
             } else {
-                Toast.makeText(this, "Izin penyimpanan diperlukan untuk download", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Izin penyimpanan diperlukan untuk mengunduh", Toast.LENGTH_SHORT).show();
             }
             pendingUrl = null;
             pendingUserAgent = null;
@@ -507,7 +507,7 @@ public class MainActivity extends Activity {
             lastDownloadId = dm.enqueue(request);
             Toast.makeText(this, "Mengunduh: " + fileName, Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Toast.makeText(this, "Download gagal: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Unduhan gagal: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
