@@ -236,6 +236,7 @@ jobs:
             --lib $ANDROID_JAR \
             --output source/bin/apk/ \
             $(find source/bin/classes -name "*.class")
+          find source/bin/apk/ -type f
 
       - name: Add DEX to APK
         run: |
