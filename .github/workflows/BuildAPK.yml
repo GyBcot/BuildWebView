@@ -230,6 +230,7 @@ jobs:
         run: |
           $BUILD_TOOLS/d8 \
             $(find source/bin/classes -name "*.class") \
+            --lib $ANDROID_JAR \
             --output source/bin/apk/
 
       - name: Add DEX to APK
