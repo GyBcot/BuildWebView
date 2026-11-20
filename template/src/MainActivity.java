@@ -48,8 +48,8 @@ public class MainActivity extends Activity {
     private static final String WEBSITE_URL = "__WEBSITE_URL__";
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int STORAGE_PERMISSION_REQUEST_CODE = 1002;
-    private static final int PULL_THRESHOLD = 220;
-    private static final float PULL_RESISTANCE = 0.45f;
+    private static final int PULL_THRESHOLD = 80;
+    private static final float PULL_RESISTANCE = 1.0f;
 
     private WebView webView;
     private ProgressBar progressBar;
@@ -138,6 +138,10 @@ public class MainActivity extends Activity {
                     pullStartY = event.getY();
                     isPulling = false;
                     hapticDone = false;
+                    if (!webView.canScrollVertically(-1)) {
+                        progressBar.setVisibility(View.VISIBLE);
+                        progressBar.setProgress(0);
+                    }
                     break;
 
                 case MotionEvent.ACTION_MOVE:
