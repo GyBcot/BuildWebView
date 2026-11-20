@@ -92,7 +92,7 @@ public class MainActivity extends Activity {
                         if (path != null && !path.isEmpty()) savedPath = path;
                     }
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        Toast.makeText(MainActivity.this, "Download berhasil! " + "\nTersimpan di: " + savedPath, Toast.LENGTH_LONG).show();
+                        Toast.makeText(MainActivity.this, "Download Berhasil! " + "\nTersimpan di: " + savedPath, Toast.LENGTH_LONG).show();
                     } else if (status == DownloadManager.STATUS_FAILED) {
                         Toast.makeText(MainActivity.this, "Download gagal: " + title, Toast.LENGTH_LONG).show();
                     }
