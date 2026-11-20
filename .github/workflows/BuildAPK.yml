@@ -237,7 +237,9 @@ jobs:
             --min-api 21 \
             --lib $ANDROID_JAR \
             --output source/bin/dex/ \
-            $(find source/bin/classes -name "*.class")
+            $(find source/bin/classes -name "*.class") && \
+          echo "=== R8 output ===" && \
+          find source/bin/dex/ -type f
 
       - name: Add DEX to APK
         run: |
