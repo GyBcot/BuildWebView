@@ -233,13 +233,14 @@ jobs:
           java -cp $ANDROID_HOME/build-tools/35.0.0/lib/d8.jar \
             com.android.tools.r8.R8 \
             --release \
+            --min-api 21 \
             --lib $ANDROID_JAR \
-            --output source/bin/apk/ \
+            --output source/bin/dex/ \
             $(find source/bin/classes -name "*.class")
-          find source/bin/apk/ -type f
 
       - name: Add DEX to APK
         run: |
+          cp source/bin/dex/classes.dex source/bin/apk/classes.dex
           cd source/bin/apk
           zip -j unaligned.apk classes.dex
 
