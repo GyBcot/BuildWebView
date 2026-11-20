@@ -231,15 +231,23 @@ jobs:
       - name: Convert to DEX (R8 Obfuscated)
         run: |
           mkdir -p source/bin/dex
+          cd source/bin/classes && jar cf ../input.jar . && cd -
+          cat > /tmp/r8-rules.pro << 'EOF'
+          -keep public class * extends android.app.Activity { public *; }
+          -keep @android.webkit.JavascriptInterface class * { *; }
+          -keepclassmembers class * {
+              @android.webkit.JavascriptInterface <methods>;
+          }
+          -dontwarn **
+          EOF
           java -cp $ANDROID_HOME/build-tools/35.0.0/lib/d8.jar \
             com.android.tools.r8.R8 \
             --release \
             --min-api 21 \
             --lib $ANDROID_JAR \
             --output source/bin/dex/ \
-            $(find source/bin/classes -name "*.class") && \
-          echo "=== R8 output ===" && \
-          find source/bin/dex/ -type f
+            --pg-conf /tmp/r8-rules.pro \
+            source/bin/input.jar
 
       - name: Add DEX to APK
         run: |
