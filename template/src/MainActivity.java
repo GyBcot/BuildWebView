@@ -9,13 +9,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.view.Gravity;
 import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.TranslateAnimation;
 import android.webkit.CookieManager;
 import android.webkit.JsPromptResult;
 import android.webkit.JsResult;
@@ -31,6 +37,7 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -50,11 +57,16 @@ public class MainActivity extends Activity {
     private FrameLayout rootLayout;
     private BroadcastReceiver downloadReceiver;
     private long lastDownloadId = -1;
+    private String lastMimeType;
 
     private String pendingUrl;
     private String pendingUserAgent;
     private String pendingContentDisposition;
     private String pendingMimeType;
+
+    private LinearLayout downloadBar;
+    private Handler downloadBarHandler = new Handler();
+    private Runnable downloadBarDismissRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,18 +95,24 @@ public class MainActivity extends Activity {
                 query.setFilterById(id);
                 Cursor cursor = dm.query(query);
                 if (cursor != null && cursor.moveToFirst()) {
-                    int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
-                    String title = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_TITLE));
-                    String localUri = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI));
+                    int statusCol = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                    int titleCol = cursor.getColumnIndex(DownloadManager.COLUMN_TITLE);
+                    int localUriCol = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                    int status = statusCol >= 0 ? cursor.getInt(statusCol) : -1;
+                    String title = titleCol >= 0 ? cursor.getString(titleCol) : "";
+                    String localUri = localUriCol >= 0 ? cursor.getString(localUriCol) : null;
                     String savedPath = title;
                     if (localUri != null && !localUri.isEmpty()) {
                         String path = Uri.parse(localUri).getPath();
                         if (path != null && !path.isEmpty()) savedPath = path;
                     }
+                    final String finalTitle = title;
+                    final String finalPath = savedPath;
+                    final String finalMime = lastMimeType;
                     if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                        Toast.makeText(MainActivity.this, "Download Berhasil! " + "\nTersimpan di: " + savedPath, Toast.LENGTH_LONG).show();
+                        runOnUiThread(() -> showDownloadBar(finalTitle, finalPath, finalMime));
                     } else if (status == DownloadManager.STATUS_FAILED) {
-                        Toast.makeText(MainActivity.this, "Download gagal: " + title, Toast.LENGTH_LONG).show();
+                        runOnUiThread(() -> Toast.makeText(MainActivity.this, "Download gagal: " + finalTitle, Toast.LENGTH_LONG).show());
                     }
                     cursor.close();
                 }
@@ -359,6 +377,96 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void showDownloadBar(String fileName, String filePath, String mimeType) {
+        if (downloadBar != null) {
+            rootLayout.removeView(downloadBar);
+            downloadBar = null;
+        }
+        if (downloadBarDismissRunnable != null) {
+            downloadBarHandler.removeCallbacks(downloadBarDismissRunnable);
+        }
+
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        bar.setBackgroundColor(Color.parseColor("#323232"));
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(48, 0, 16, 0);
+
+        FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            160
+        );
+        barParams.gravity = Gravity.BOTTOM;
+        bar.setLayoutParams(barParams);
+
+        TextView msgView = new TextView(this);
+        String shortName = fileName.length() > 30 ? fileName.substring(0, 27) + "..." : fileName;
+        msgView.setText("Unduhan selesai · " + shortName);
+        msgView.setTextColor(Color.WHITE);
+        msgView.setTextSize(14);
+        msgView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView btnBuka = new TextView(this);
+        btnBuka.setText("BUKA");
+        btnBuka.setTextColor(Color.parseColor("#80CBC4"));
+        btnBuka.setTextSize(14);
+        btnBuka.setTypeface(null, Typeface.BOLD);
+        btnBuka.setPadding(24, 0, 24, 0);
+        btnBuka.setOnClickListener(v -> {
+            try {
+                Intent open = new Intent(Intent.ACTION_VIEW);
+                Uri uri = Uri.parse("file://" + filePath);
+                open.setDataAndType(uri, mimeType != null ? mimeType : "*/*");
+                open.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(Intent.createChooser(open, "Buka dengan"));
+            } catch (Exception e) {
+                Toast.makeText(this, "Tidak dapat membuka file", Toast.LENGTH_SHORT).show();
+            }
+            dismissDownloadBar();
+        });
+
+        bar.addView(msgView);
+        bar.addView(btnBuka);
+
+        rootLayout.addView(bar);
+        downloadBar = bar;
+
+        TranslateAnimation slideUp = new TranslateAnimation(
+            Animation.RELATIVE_TO_SELF, 0f,
+            Animation.RELATIVE_TO_SELF, 0f,
+            Animation.RELATIVE_TO_SELF, 1f,
+            Animation.RELATIVE_TO_SELF, 0f
+        );
+        slideUp.setDuration(250);
+        bar.startAnimation(slideUp);
+
+        downloadBarDismissRunnable = this::dismissDownloadBar;
+        downloadBarHandler.postDelayed(downloadBarDismissRunnable, 4000);
+    }
+
+    private void dismissDownloadBar() {
+        if (downloadBar == null) return;
+        TranslateAnimation slideDown = new TranslateAnimation(
+            Animation.RELATIVE_TO_SELF, 0f,
+            Animation.RELATIVE_TO_SELF, 0f,
+            Animation.RELATIVE_TO_SELF, 0f,
+            Animation.RELATIVE_TO_SELF, 1f
+        );
+        slideDown.setDuration(200);
+        slideDown.setAnimationListener(new Animation.AnimationListener() {
+            @Override public void onAnimationStart(Animation a) {}
+            @Override public void onAnimationRepeat(Animation a) {}
+            @Override
+            public void onAnimationEnd(Animation a) {
+                if (downloadBar != null) {
+                    rootLayout.removeView(downloadBar);
+                    downloadBar = null;
+                }
+            }
+        });
+        downloadBar.startAnimation(slideDown);
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
@@ -390,6 +498,7 @@ public class MainActivity extends Activity {
             if (mimeType != null) request.setMimeType(mimeType);
             DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
             lastDownloadId = dm.enqueue(request);
+            lastMimeType = mimeType;
             Toast.makeText(this, "Mengunduh: " + fileName, Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
             Toast.makeText(this, "Download gagal: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -452,10 +561,14 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (downloadBarDismissRunnable != null) {
+            downloadBarHandler.removeCallbacks(downloadBarDismissRunnable);
+        }
         if (downloadReceiver != null) {
             try { unregisterReceiver(downloadReceiver); } catch (Exception e) {}
             downloadReceiver = null;
         }
+        
         if (webView != null) {
             webView.clearHistory();
             webView.loadUrl("about:blank");
@@ -476,10 +589,12 @@ public class MainActivity extends Activity {
             }
             return;
         }
+        
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
             return;
         }
+        
         super.onBackPressed();
     }
 }
