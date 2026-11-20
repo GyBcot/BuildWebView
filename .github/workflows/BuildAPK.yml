@@ -72,11 +72,12 @@ jobs:
       - name: Download SwipeRefreshLayout AAR
         run: |
           mkdir -p source/libs
-          curl -L -o /tmp/swiperefresh.aar "https://dl.google.com/android/repository/swiperefreshlayout-1.1.0.aar"
-          cd /tmp && mkdir -p swiperefresh_extract
-          cp swiperefresh.aar swiperefresh_extract/
-          cd swiperefresh_extract && unzip -q swiperefresh.aar
-          cp classes.jar /tmp/swiperefresh.jar
+          curl -f -L -o /tmp/swiperefresh.aar \
+            "https://maven.google.com/androidx/swiperefreshlayout/swiperefreshlayout/1.1.0/swiperefreshlayout-1.1.0.aar"
+          mkdir -p /tmp/swiperefresh_extract
+          cp /tmp/swiperefresh.aar /tmp/swiperefresh_extract/
+          cd /tmp/swiperefresh_extract && unzip -q swiperefresh.aar
+          cp /tmp/swiperefresh_extract/classes.jar /tmp/swiperefresh.jar
           echo "SWIPEREFRESH_JAR=/tmp/swiperefresh.jar" >> $GITHUB_ENV
 
       - name: Set Variables
