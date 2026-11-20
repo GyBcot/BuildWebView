@@ -378,30 +378,39 @@ public class MainActivity extends Activity {
 
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setBackgroundColor(Color.parseColor("#323232"));
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(48, 0, 16, 0);
+        bar.setPadding(48, 32, 24, 32);
+
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(Color.parseColor("#212121"));
+        bg.setCornerRadii(new float[]{24, 24, 24, 24, 0, 0, 0, 0});
+        bar.setBackground(bg);
+
+        if (Build.VERSION.SDK_INT >= 21) {
+            bar.setElevation(16f);
+        }
 
         FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
-            160
+            FrameLayout.LayoutParams.WRAP_CONTENT
         );
         barParams.gravity = Gravity.BOTTOM;
         bar.setLayoutParams(barParams);
 
         TextView msgView = new TextView(this);
-        String shortName = fileName.length() > 30 ? fileName.substring(0, 27) + "..." : fileName;
-        msgView.setText("Unduhan selesai · " + shortName);
+        msgView.setText("Unduhan selesai · " + fileName);
         msgView.setTextColor(Color.WHITE);
-        msgView.setTextSize(14);
+        msgView.setTextSize(13);
+        msgView.setSingleLine(true);
+        msgView.setEllipsize(android.text.TextUtils.TruncateAt.END);
         msgView.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView btnBuka = new TextView(this);
         btnBuka.setText("BUKA");
         btnBuka.setTextColor(Color.parseColor("#80CBC4"));
-        btnBuka.setTextSize(14);
+        btnBuka.setTextSize(13);
         btnBuka.setTypeface(null, Typeface.BOLD);
-        btnBuka.setPadding(24, 0, 24, 0);
+        btnBuka.setPadding(32, 16, 16, 16);
         btnBuka.setOnClickListener(v -> {
             try {
                 DownloadManager dm = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
@@ -435,7 +444,6 @@ public class MainActivity extends Activity {
         );
         slideUp.setDuration(250);
         bar.startAnimation(slideUp);
-
         downloadBarDismissRunnable = this::dismissDownloadBar;
         downloadBarHandler.postDelayed(downloadBarDismissRunnable, 4000);
     }
