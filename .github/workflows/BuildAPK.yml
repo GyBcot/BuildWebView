@@ -74,11 +74,16 @@ jobs:
           mkdir -p source/libs
           curl -f -L -o /tmp/swiperefresh.aar \
             "https://maven.google.com/androidx/swiperefreshlayout/swiperefreshlayout/1.1.0/swiperefreshlayout-1.1.0.aar"
-          mkdir -p /tmp/swiperefresh_extract
+          curl -f -L -o /tmp/androidx-core.aar \
+            "https://maven.google.com/androidx/core/core/1.9.0/core-1.9.0.aar"
+          mkdir -p /tmp/swiperefresh_extract /tmp/core_extract
           cp /tmp/swiperefresh.aar /tmp/swiperefresh_extract/
           cd /tmp/swiperefresh_extract && unzip -q swiperefresh.aar
           cp /tmp/swiperefresh_extract/classes.jar /tmp/swiperefresh.jar
-          echo "SWIPEREFRESH_JAR=/tmp/swiperefresh.jar" >> $GITHUB_ENV
+          cp /tmp/androidx-core.aar /tmp/core_extract/
+          cd /tmp/core_extract && unzip -q androidx-core.aar
+          cp /tmp/core_extract/classes.jar /tmp/androidx-core.jar
+          echo "SWIPEREFRESH_JAR=/tmp/swiperefresh.jar:/tmp/androidx-core.jar" >> $GITHUB_ENV
 
       - name: Set Variables
         id: vars
@@ -239,7 +244,7 @@ jobs:
         run: |
           $BUILD_TOOLS/d8 \
             $(find source/bin/classes -name "*.class") \
-            $SWIPEREFRESH_JAR \
+            $(echo $SWIPEREFRESH_JAR | tr ':' ' ') \
             --lib $ANDROID_JAR \
             --output source/bin/apk/
 
