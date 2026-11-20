@@ -111,7 +111,7 @@ jobs:
               package="${PKG}"
               android:versionCode="${{ github.event.inputs.version_code }}"
               android:versionName="${{ github.event.inputs.version_name }}">
-              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="37" />
+              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="35" />
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
               <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
