@@ -41,6 +41,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.Manifest;
 import android.content.pm.PackageManager;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 public class MainActivity extends Activity {
 
@@ -51,6 +52,7 @@ public class MainActivity extends Activity {
     private WebView webView;
     private ProgressBar progressBar;
     private LinearLayout noConnectionLayout;
+    private SwipeRefreshLayout swipeRefreshLayout;
     private ValueCallback<Uri[]> filePathCallback;
     private View customView;
     private WebChromeClient.CustomViewCallback customViewCallback;
@@ -119,7 +121,20 @@ public class MainActivity extends Activity {
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
         noConnectionLayout = findViewById(R.id.noConnectionLayout);
+        swipeRefreshLayout = findViewById(R.id.swipeRefresh);
         Button retryButton = findViewById(R.id.retryButton);
+
+        swipeRefreshLayout.setColorSchemeColors(Color.parseColor("#0d9488"));
+        swipeRefreshLayout.setProgressBackgroundColorSchemeColor(Color.parseColor("#1a2744"));
+        swipeRefreshLayout.setOnRefreshListener(() -> {
+            if (isConnected()) {
+                webView.reload();
+            } else {
+                swipeRefreshLayout.setRefreshing(false);
+                webView.setVisibility(View.GONE);
+                noConnectionLayout.setVisibility(View.VISIBLE);
+            }
+        });
 
         webView.addJavascriptInterface(new Object() {
             @android.webkit.JavascriptInterface
@@ -190,6 +205,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
+                swipeRefreshLayout.setRefreshing(false);
                 CookieManager.getInstance().flush();
                 view.evaluateJavascript(
                     "navigator.clipboard.readText = function() {" +
@@ -236,6 +252,7 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (request.isForMainFrame()) {
+                        swipeRefreshLayout.setRefreshing(false);
                         webView.setVisibility(View.GONE);
                         noConnectionLayout.setVisibility(View.VISIBLE);
                         progressBar.setVisibility(View.GONE);
@@ -245,6 +262,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                swipeRefreshLayout.setRefreshing(false);
                 webView.setVisibility(View.GONE);
                 noConnectionLayout.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.GONE);
