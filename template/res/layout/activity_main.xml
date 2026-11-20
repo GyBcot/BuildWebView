@@ -23,23 +23,6 @@
         android:max="100"
         android:indeterminate="false" />
 
-    <FrameLayout
-        android:id="@+id/pullRefreshContainer"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_gravity="top"
-        android:visibility="gone">
-
-        <ProgressBar
-            android:id="@+id/pullRefreshSpinner"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_gravity="center"
-            android:indeterminateTint="@color/primary"
-            android:visibility="gone" />
-
-    </FrameLayout>
-
     <LinearLayout
         android:id="@+id/noConnectionLayout"
         android:layout_width="match_parent"
