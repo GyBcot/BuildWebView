@@ -49,11 +49,10 @@ public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST_CODE = 1001;
     private static final int STORAGE_PERMISSION_REQUEST_CODE = 1002;
     private static final int PULL_THRESHOLD = 220;
+    private static final float PULL_RESISTANCE = 0.45f;
 
     private WebView webView;
     private ProgressBar progressBar;
-    private ProgressBar pullRefreshSpinner;
-    private FrameLayout pullRefreshContainer;
     private LinearLayout noConnectionLayout;
     private ValueCallback<Uri[]> filePathCallback;
     private View customView;
@@ -74,6 +73,7 @@ public class MainActivity extends Activity {
     private float pullStartY = 0;
     private boolean isPulling = false;
     private boolean isRefreshing = false;
+    private boolean hapticDone = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -127,50 +127,55 @@ public class MainActivity extends Activity {
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
         noConnectionLayout = findViewById(R.id.noConnectionLayout);
-        pullRefreshContainer = findViewById(R.id.pullRefreshContainer);
-        pullRefreshSpinner = findViewById(R.id.pullRefreshSpinner);
         Button retryButton = findViewById(R.id.retryButton);
 
-        webView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                if (isRefreshing) return false;
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        pullStartY = event.getY();
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
+        webView.setOnTouchListener((v, event) -> {
+            if (isRefreshing) return false;
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    pullStartY = event.getY();
+                    isPulling = false;
+                    hapticDone = false;
+                    break;
+
+                case MotionEvent.ACTION_MOVE:
+                    float deltaY = (event.getY() - pullStartY) * PULL_RESISTANCE;
+                    boolean atTop = !webView.canScrollVertically(-1);
+                    if (atTop && deltaY > 0) {
+                        isPulling = true;
+                        float progress = Math.min(deltaY / PULL_THRESHOLD, 1f);
+                        progressBar.setVisibility(View.VISIBLE);
+                        progressBar.setProgress((int)(progress * 100));
+                        if (progress >= 1f && !hapticDone) {
+                            hapticDone = true;
+                            webView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                        }
+                        return true;
+                    } else {
+                        if (!isRefreshing) {
+                            progressBar.setVisibility(View.GONE);
+                            progressBar.setProgress(0);
+                        }
+                    }
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    if (isPulling) {
+                        float delta = (event.getY() - pullStartY) * PULL_RESISTANCE;
+                        if (delta >= PULL_THRESHOLD && isConnected()) {
+                            triggerRefresh();
+                        } else {
+                            progressBar.setVisibility(View.GONE);
+                            progressBar.setProgress(0);
+                        }
                         isPulling = false;
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        float deltaY = event.getY() - pullStartY;
-                        boolean atTop = !webView.canScrollVertically(-1);
-                        if (atTop && deltaY > 0) {
-                            isPulling = true;
-                            pullRefreshContainer.setVisibility(View.VISIBLE);
-                            float progress = Math.min(deltaY / PULL_THRESHOLD, 1f);
-                            pullRefreshContainer.setAlpha(progress);
-                            if (progress >= 1f) {
-                                pullRefreshSpinner.setVisibility(View.VISIBLE);
-                            } else {
-                                pullRefreshSpinner.setVisibility(View.GONE);
-                            }
-                            return true;
-                        }
-                        break;
-                    case MotionEvent.ACTION_UP:
-                    case MotionEvent.ACTION_CANCEL:
-                        if (isPulling) {
-                            float delta = event.getY() - pullStartY;
-                            if (delta >= PULL_THRESHOLD && isConnected()) {
-                                triggerRefresh();
-                            } else {
-                                resetPull();
-                            }
-                            isPulling = false;
-                        }
-                        break;
-                }
-                return false;
+                    }
+                    break;
             }
+            return false;
         });
 
         webView.addJavascriptInterface(new Object() {
@@ -186,25 +191,17 @@ public class MainActivity extends Activity {
             }
         }, "AndroidBridge");
 
-        rootLayout.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
-            @Override
-            public android.view.WindowInsets onApplyWindowInsets(View v, android.view.WindowInsets insets) {
-                v.setPadding(
-                    insets.getSystemWindowInsetLeft(),
-                    insets.getSystemWindowInsetTop(),
-                    insets.getSystemWindowInsetRight(),
-                    insets.getSystemWindowInsetBottom()
-                );
-                return insets;
-            }
+        rootLayout.setOnApplyWindowInsetsListener((v, insets) -> {
+            v.setPadding(
+                insets.getSystemWindowInsetLeft(),
+                insets.getSystemWindowInsetTop(),
+                insets.getSystemWindowInsetRight(),
+                insets.getSystemWindowInsetBottom()
+            );
+            return insets;
         });
 
-        retryButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                loadWebsite();
-            }
-        });
+        retryButton.setOnClickListener(v -> loadWebsite());
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -242,10 +239,13 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 progressBar.setVisibility(View.GONE);
-                resetPull();
+                progressBar.setProgress(0);
                 isRefreshing = false;
+                isPulling = false;
+                hapticDone = false;
                 CookieManager.getInstance().flush();
                 view.evaluateJavascript(
+                    "document.body.style.overscrollBehaviorY = 'none';" +
                     "navigator.clipboard.readText = function() {" +
                     "  return Promise.resolve(window.AndroidBridge.readClipboard());" +
                     "};",
@@ -290,22 +290,22 @@ public class MainActivity extends Activity {
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     if (request.isForMainFrame()) {
-                        resetPull();
                         isRefreshing = false;
                         webView.setVisibility(View.GONE);
                         noConnectionLayout.setVisibility(View.VISIBLE);
                         progressBar.setVisibility(View.GONE);
+                        progressBar.setProgress(0);
                     }
                 }
             }
 
             @Override
             public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                resetPull();
                 isRefreshing = false;
                 webView.setVisibility(View.GONE);
                 noConnectionLayout.setVisibility(View.VISIBLE);
                 progressBar.setVisibility(View.GONE);
+                progressBar.setProgress(0);
             }
         });
 
@@ -326,7 +326,10 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
-                progressBar.setProgress(newProgress);
+                if (isRefreshing || !isPulling) {
+                    progressBar.setVisibility(View.VISIBLE);
+                    progressBar.setProgress(newProgress);
+                }
             }
 
             @Override
@@ -427,16 +430,11 @@ public class MainActivity extends Activity {
 
     private void triggerRefresh() {
         isRefreshing = true;
-        pullRefreshSpinner.setVisibility(View.VISIBLE);
-        pullRefreshContainer.setVisibility(View.VISIBLE);
-        pullRefreshContainer.setAlpha(1f);
+        isPulling = false;
+        hapticDone = false;
+        progressBar.setVisibility(View.VISIBLE);
+        progressBar.setProgress(0);
         webView.reload();
-    }
-
-    private void resetPull() {
-        pullRefreshContainer.setVisibility(View.GONE);
-        pullRefreshSpinner.setVisibility(View.GONE);
-        pullRefreshContainer.setAlpha(0f);
     }
 
     private void showDownloadBar(String fileName) {
