@@ -43,6 +43,10 @@ on:
         description: 'URL icon APK (png/jpg, min 192x192)'
         required: false
         default: ''
+      show_splash:
+        description: 'Tampilkan splash screen (true/false)'
+        required: false
+        default: 'true'
 
 permissions:
   actions: write
@@ -107,10 +111,16 @@ jobs:
           PKG="${{ github.event.inputs.package_name }}"
           PKG_PATH="${{ steps.vars.outputs.pkg_path }}"
           USE_HTML="${{ steps.vars.outputs.use_html }}"
+          SHOW_SPLASH="${{ github.event.inputs.show_splash }}"
           if [ "$USE_HTML" = "true" ]; then
             URL="file:///android_asset/index.html"
           else
             URL="${{ github.event.inputs.website_url }}"
+          fi
+          if [ "$SHOW_SPLASH" = "false" ]; then
+            SHOW_SPLASH_BOOL="false"
+          else
+            SHOW_SPLASH_BOOL="true"
           fi
           cp template/res/layout/activity_main.xml source/res/layout/
           cp template/res/layout/activity_splash.xml source/res/layout/
@@ -121,6 +131,7 @@ jobs:
           sed -i "s|__PACKAGE__|${PKG}|g" source/src/${PKG_PATH}/MainActivity.java
           sed -i "s|__PACKAGE__|${PKG}|g" source/src/${PKG_PATH}/SplashActivity.java
           sed -i "s|__WEBSITE_URL__|${URL}|g" source/src/${PKG_PATH}/MainActivity.java
+          sed -i "s|__SHOW_SPLASH__|${SHOW_SPLASH_BOOL}|g" source/src/${PKG_PATH}/SplashActivity.java
 
       - name: Generate Dynamic Resource Files
         run: |
@@ -296,3 +307,4 @@ jobs:
           name: ${{ steps.vars.outputs.apk_name }}
           path: ${{ steps.sign.outputs.apk_path }}
           retention-days: 7
+          
