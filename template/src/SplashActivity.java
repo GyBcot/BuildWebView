@@ -11,11 +11,19 @@ import android.widget.TextView;
 
 public class SplashActivity extends Activity {
 
-    private static final int SPLASH_DURATION = 1800;
+    private static final int SPLASH_DURATION = 1500;
+    private static final boolean SHOW_SPLASH = __SHOW_SPLASH__;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (!SHOW_SPLASH) {
+            startActivity(new Intent(SplashActivity.this, MainActivity.class));
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_splash);
 
         ImageView logo = findViewById(R.id.splashLogo);
