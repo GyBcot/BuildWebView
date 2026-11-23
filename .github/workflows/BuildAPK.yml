@@ -245,8 +245,8 @@ jobs:
       - name: Add Assets to APK
         if: steps.vars.outputs.use_html == 'true'
         run: |
-          cd source/assets
-          zip -r ../../source/bin/apk/unaligned.apk . -x ".*"
+          cd source
+          zip -r bin/apk/unaligned.apk assets/ -x ".*"
 
       - name: Compile Java
         run: |
