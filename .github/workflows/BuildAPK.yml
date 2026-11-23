@@ -12,9 +12,13 @@ on:
         required: true
         default: 'com.example.myapp'
       website_url:
-        description: 'URL website yang dibuka di WebView'
+        description: 'URL website atau file:///android_asset/index.html'
         required: true
         default: 'https://example.com'
+      html_url:
+        description: 'URL download file HTML (kosongkan jika pakai URL website)'
+        required: false
+        default: ''
       tagline:
         description: 'Tagline splash screen'
         required: false
@@ -77,6 +81,12 @@ jobs:
           echo "pkg_path=$PKG_PATH" >> $GITHUB_OUTPUT
           APP_SAFE=$(echo "${{ github.event.inputs.app_name }}" | tr ' ' '_')
           echo "apk_name=${APP_SAFE}_v${{ github.event.inputs.version_name }}_signed.apk" >> $GITHUB_OUTPUT
+          HTML_URL="${{ github.event.inputs.html_url }}"
+          if [ -n "$HTML_URL" ]; then
+            echo "use_html=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_html=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Prepare Directories
         run: |
@@ -85,12 +95,23 @@ jobs:
           mkdir -p source/gen source/bin/classes source/bin/apk source/bin/res hasil
           mkdir -p source/res/drawable source/res/layout source/res/values source/res/xml
           mkdir -p source/res/mipmap-{hdpi,mdpi,xhdpi,xxhdpi,xxxhdpi}
+          mkdir -p source/assets
+
+      - name: Download HTML File
+        if: steps.vars.outputs.use_html == 'true'
+        run: |
+          wget -q -O source/assets/index.html "${{ github.event.inputs.html_url }}"
 
       - name: Copy Static Template Files
         run: |
           PKG="${{ github.event.inputs.package_name }}"
           PKG_PATH="${{ steps.vars.outputs.pkg_path }}"
-          URL="${{ github.event.inputs.website_url }}"
+          USE_HTML="${{ steps.vars.outputs.use_html }}"
+          if [ "$USE_HTML" = "true" ]; then
+            URL="file:///android_asset/index.html"
+          else
+            URL="${{ github.event.inputs.website_url }}"
+          fi
           cp template/res/layout/activity_main.xml source/res/layout/
           cp template/res/layout/activity_splash.xml source/res/layout/
           cp template/res/drawable/progress_bar.xml source/res/drawable/
@@ -104,7 +125,12 @@ jobs:
       - name: Generate Dynamic Resource Files
         run: |
           PKG="${{ github.event.inputs.package_name }}"
-          DOMAIN=$(echo "${{ github.event.inputs.website_url }}" | sed 's|https\?://||' | sed 's|/.*||')
+          USE_HTML="${{ steps.vars.outputs.use_html }}"
+          if [ "$USE_HTML" = "true" ]; then
+            DOMAIN="localhost"
+          else
+            DOMAIN=$(echo "${{ github.event.inputs.website_url }}" | sed 's|https\?://||' | sed 's|/.*||')
+          fi
           cat > source/AndroidManifest.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
@@ -140,7 +166,6 @@ jobs:
                       android:exported="false" />
               </application>
           </manifest>
-          
           EOF
           cat > source/res/xml/network_security_config.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
@@ -155,7 +180,6 @@ jobs:
                   <domain includeSubdomains="true">${DOMAIN}</domain>
               </domain-config>
           </network-security-config>
-          
           EOF
           cat > source/res/values/colors.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
@@ -165,7 +189,6 @@ jobs:
               <color name="primary_dark">#${{ github.event.inputs.primary_color }}</color>
               <color name="white">#FFFFFF</color>
           </resources>
-          
           EOF
           APP_NAME=$(echo "${{ github.event.inputs.app_name }}" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g')
           TAGLINE=$(echo "${{ github.event.inputs.tagline }}" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g; s/'"'"'/\&apos;/g')
@@ -188,7 +211,6 @@ jobs:
           else
             wget -q -O /tmp/ic_launcher_orig "https://via.placeholder.com/192/${{ github.event.inputs.primary_color }}/FFFFFF?text=APP"
           fi
-          
           python3 - << 'EOF'
           from PIL import Image
           sizes = {
@@ -219,6 +241,12 @@ jobs:
             --java source/gen \
             -o source/bin/apk/unaligned.apk \
             --auto-add-overlay
+
+      - name: Add Assets to APK
+        if: steps.vars.outputs.use_html == 'true'
+        run: |
+          cd source/assets
+          zip -r ../../source/bin/apk/unaligned.apk . -x ".*"
 
       - name: Compile Java
         run: |
@@ -268,4 +296,3 @@ jobs:
           name: ${{ steps.vars.outputs.apk_name }}
           path: ${{ steps.sign.outputs.apk_path }}
           retention-days: 7
-          
